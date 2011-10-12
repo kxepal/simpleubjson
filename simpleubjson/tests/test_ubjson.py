@@ -9,6 +9,7 @@
 
 import unittest
 import simpleubjson
+from StringIO import StringIO
 from types import GeneratorType
 
 class DecoderTestCase(unittest.TestCase):
@@ -26,6 +27,14 @@ class DecoderTestCase(unittest.TestCase):
 
     def test_fail_on_unknown_marker(self):
         self.assertRaises(ValueError, simpleubjson.decode, 'Я')
+
+
+class EncoderTestCase(unittest.TestCase):
+
+    def test_write_encoded_data_to_stream(self):
+        stream = StringIO()
+        simpleubjson.encode((i for i in range(5)), stream)
+        self.assertEqual(stream.getvalue(), 'a\xffB\x00B\x01B\x02B\x03B\x04E')
 
 
 class NullTestCase(unittest.TestCase):

@@ -113,10 +113,15 @@ def encode_huge_value(value):
         return ['H', pack_data('I', size),
                      pack_data('%ds' % size, value)]
 
-def encode(value):
+def encode(value, output=None):
     handler = handlers.get(type(value))
     try:
-        return ''.join(handler(value))
+        data = handler(value)
+        if output is None:
+            return ''.join(data)
+        else:
+            for chunk in data:
+                output.write(chunk)
     except struct.error, err:
         raise ValueError('Unable to encode value %s (first 100 bytes),'
                          ' reason:\n%s' % (repr(value)[:100], err))
