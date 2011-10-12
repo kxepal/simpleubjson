@@ -273,7 +273,7 @@ class StreamTestCase(unittest.TestCase):
         self.assertRaises(ValueError, list,
                           simpleubjson.decode('o\xff\s\x03fooE'))
 
-    def test_decode_fail_on_nonstring_key(self):
+    def test_fail_decode_object_with_nonstring_key(self):
         self.assertRaises(ValueError, list,
                           simpleubjson.decode('o\xff\B\x03\s\x03fooE'))
 
