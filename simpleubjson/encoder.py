@@ -8,7 +8,7 @@
 #
 
 import struct
-from types import GeneratorType
+from types import GeneratorType, XRangeType
 
 NOOP = type('NoopType', (object,), {})()
 
@@ -82,7 +82,7 @@ def handle_array(value):
     for item in value:
         yield ''.join(encode(item))
 
-@pytypes(GeneratorType)
+@pytypes(GeneratorType, XRangeType)
 def handle_generator(value):
     yield 'a'
     yield '\xff'

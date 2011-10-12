@@ -216,6 +216,10 @@ class ArrayTestCase(unittest.TestCase):
         data = simpleubjson.decode('A\x00\x00\x04\x00' + 'B\x01' * 1024)
         self.assertEqual(data, list([1] * 1024))
 
+    def test_encode_range(self):
+        data = simpleubjson.encode(range(4))
+        self.assertEqual(data, 'a\x04B\x00B\x01B\x02B\x03')
+
     def test_encode_large_array(self):
         data = simpleubjson.encode(list([1] * 1024))
         self.assertEqual(data, 'A\x00\x00\x04\x00' + 'B\x01' * 1024)
@@ -262,6 +266,10 @@ class StreamTestCase(unittest.TestCase):
         item = data.next()
         self.assertTrue(isinstance(item, list))
         self.assertEqual(item, [('foo', 42)])
+
+    def test_encode_xrange(self):
+        data = simpleubjson.encode(xrange(4))
+        self.assertEqual(data, 'a\xffB\x00B\x01B\x02B\x03E')
 
     def test_fail_decode_on_early_array_end(self):
         self.assertRaises(ValueError, list, simpleubjson.decode('a\xff'))
