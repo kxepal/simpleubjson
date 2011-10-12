@@ -31,6 +31,9 @@ class DecoderTestCase(unittest.TestCase):
 
 class EncoderTestCase(unittest.TestCase):
 
+    def test_fail_if_no_handler_matches(self):
+        self.assertRaises(TypeError, simpleubjson.encode, object())
+
     def test_write_encoded_data_to_stream(self):
         stream = StringIO()
         simpleubjson.encode((i for i in range(5)), stream)

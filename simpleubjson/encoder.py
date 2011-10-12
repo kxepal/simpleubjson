@@ -115,6 +115,8 @@ def encode_huge_value(value):
 
 def encode(value, output=None):
     handler = handlers.get(type(value))
+    if handler is None:
+        raise TypeError('No handlers for value type %s' % type(value))
     try:
         data = handler(value)
         if output is None:
