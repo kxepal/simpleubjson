@@ -14,6 +14,13 @@ NOOP = type('NoopType', (object,), {})()
 
 handlers = {}
 
+is_byte = lambda value: (-2 ** 7) <= value <= (2 ** 7 - 1)
+is_int16 = lambda value: (-2 ** 15) <= value <= (2 ** 15 - 1)
+is_int32 = lambda value: (-2 ** 31) <= value <= (2 ** 31 - 1)
+is_int64 = lambda value: (-2 ** 63) <= value <= (2 ** 63 - 1)
+is_float = lambda value: (-1 / 1.18e38) <= value <= (3.4e38)
+is_double = lambda value: (-1 / 2.23e308) <= value <= (1.80e308)
+
 def pack_data(pattern, data):
     return struct.pack('>' + pattern, data)
 
@@ -38,22 +45,22 @@ def handle_bool(value):
 
 @pytypes(int, long)
 def handle_number(value):
-    if -128 <= value <= 127:
+    if is_byte(value):
         return ['B', pack_data('b', value)]
-    elif -32768 <= value <= 32767:
+    elif is_int16(value):
         return ['i', pack_data('h', value)]
-    elif -2147483648 <= value <= 2147483648:
+    elif is_int32(value):
         return ['I', pack_data('i', value)]
-    elif -9223372036854775808L <= value <= 9223372036854775807L:
+    elif is_int64(value):
         return ['L', pack_data('q', value)]
     else:
         return encode_huge_value(value)
 
 @pytypes(float)
 def handle_float(value):
-    if 1/1.18e38 <= abs(value) <= 3.4e38:
+    if is_float(value):
         return ['d', pack_data('f', value)]
-    elif 1/2.23e308 <= abs(value) <= 1.80e308:
+    elif is_double(value):
         return ['D', pack_data('d', value)]
     else:
         return encode_huge_value(value)
