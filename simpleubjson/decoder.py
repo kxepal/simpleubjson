@@ -194,6 +194,14 @@ def decode(stream):
 
     :return: Decoded Python object. See mapping table below.
 
+    :raises:
+        ValueError if:
+            * Nothing to decode: empty data source.
+            * Unsupported marker: probably it's invalid.
+            * Unexpected marker: `noop` value or EOS shouldn't occurs in sized
+              arrays or objects.
+            * Object key is not string type.
+
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
     +========+============================+============================+=======+
@@ -244,18 +252,12 @@ def decode(stream):
         Noop values are ignored.
 
     (2)
-        Nested generators are automaticaly converted to lists.
+        Nested generators are automatically converted to lists.
 
     (3)
-        Unsized objects are represented as list of key-value tuples.
+        Unsized objects are represented as list of 2-element tuples with object
+        key and value.
 
-    :raises:
-        ValueError if:
-            * Nothing to decode: empty data source.
-            * Unsupported marker: probably it's invalid.
-            * Unexpected marker: `noop` value or EOS shouldn't occurs in sized
-              arrays or objects.
-            * Object key is not string type.
     """
     if isinstance(stream, basestring):
         stream = StringIO(stream)

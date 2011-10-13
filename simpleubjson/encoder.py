@@ -10,6 +10,7 @@
 import struct
 from types import GeneratorType, XRangeType
 
+#: Noop sentinel value
 NOOP = type('NoopType', (object,), {})()
 
 handlers = {}
@@ -121,6 +122,76 @@ def encode_huge_value(value):
                      pack_data('%ds' % size, value)]
 
 def encode(value, output=None):
+    """Encodes Python object to Universal Binary JSON data.
+
+    :param value: Python object.
+    :param output: `.write([data])`-able object.
+
+    :return: Encoded Python object. See mapping table below.
+             If `output` param is specified, all data would be written into it
+             by chunks and None will be returned.
+
+    :raises:
+        * TypeError if no handlers specified for passed value type.
+        * ValueError if unable to pack Python value to binary form.
+
+    +----------------------------+----------------------------+-------+
+    | Python type                | UBJSON type                | Notes |
+    +============================+============================+=======+
+    | :const:`NOOP`              | noop                       |       |
+    +----------------------------+----------------------------+-------+
+    | None                       | null                       |       |
+    +----------------------------+----------------------------+-------+
+    | False                      | false                      |       |
+    +----------------------------+----------------------------+-------+
+    | True                       | true                       |       |
+    +----------------------------+----------------------------+-------+
+    | int                        | byte                       | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | int                        | int16                      | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | int or long                | int32                      | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | int or long                | int64                      | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | float                      | float                      | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | float                      | double                     | \(1)  |
+    +----------------------------+----------------------------+-------+
+    | long                       | hugeint                    | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | str                        | string                     | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | unicode                    | string                     | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | tuple                      | sized array                | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | list                       | sized array                | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | generator                  | unsized array              |       |
+    +----------------------------+----------------------------+-------+
+    | dict                       | sized object               | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | xrange                     | unsized array              |       |
+    +----------------------------+----------------------------+-------+
+
+    Notes:
+
+    (1)
+        Depending on value it will be encoded to specified UBJSON type:
+            * byte: if -128 <= value <= 127
+            * int16: if -32768 <= value <= 32767
+            * int32: if -2147483648 <= value <= 2147483647
+            * int64: if -9223372036854775808 <= value 9223372036854775807
+            * float: if -1/1.18e38 <= value <= 3.4e38
+            * double: if -1/2.23e308 <= value <= 1.80e308
+
+        Any other values would be encoded as hugeint data.
+
+    (2)
+        Depending on value length it would be encoded to short data version
+        to long one.
+    """
     handler = handlers.get(type(value))
     if handler is None:
         raise TypeError('No handlers for value type %s' % type(value))
