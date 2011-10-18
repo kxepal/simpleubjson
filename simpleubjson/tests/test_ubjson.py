@@ -174,6 +174,34 @@ class FloatTestCase(unittest.TestCase):
         data = simpleubjson.encode(100500e234)
         self.assertEqual(data, 'D\x71\x8e\xde\x0b\x49\x13\x5b\x25')
 
+    def test_encode_min_float(self):
+        data = simpleubjson.encode(-1.18e-38)
+        self.assertEqual(data, 'd\x80\x80\x7d\x99')
+        data = simpleubjson.encode(-3.4e38)
+        self.assertEqual(data, 'd\xff\x7f\xc9\x9e')
+
+    def test_encode_max_float(self):
+        data = simpleubjson.encode(1.18e-38)
+        self.assertEqual(data, 'd\x00\x80\x7d\x99')
+        data = simpleubjson.encode(3.4e38)
+        self.assertEqual(data, 'd\x7f\x7f\xc9\x9e')
+
+    def test_encode_min_double(self):
+        data = simpleubjson.encode(-2.23e-308)
+        self.assertEqual(data, 'D\x80\x10\x09\x11\x77\x58\x7f\x83')
+        data = simpleubjson.encode(-1.79e308)
+        self.assertEqual(data, 'D\xff\xef\xdc\xf1\x58\xad\xbb\x99')
+
+    def test_encode_max_double(self):
+        data = simpleubjson.encode(2.23e-308)
+        self.assertEqual(data, 'D\x00\x10\x09\x11\x77\x58\x7f\x83')
+        data = simpleubjson.encode(1.79e308)
+        self.assertEqual(data, 'D\x7f\xef\xdc\xf1\x58\xad\xbb\x99')
+
+    def test_encode_too_huge_value(self):
+        data = simpleubjson.encode(1.79e308)
+        self.assertEqual(data, 'D\x7f\xef\xdc\xf1\x58\xad\xbb\x99')
+
 
 class StringTestCase(unittest.TestCase):
 

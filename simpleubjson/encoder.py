@@ -19,8 +19,8 @@ is_byte = lambda value: (-2 ** 7) <= value <= (2 ** 7 - 1)
 is_int16 = lambda value: (-2 ** 15) <= value <= (2 ** 15 - 1)
 is_int32 = lambda value: (-2 ** 31) <= value <= (2 ** 31 - 1)
 is_int64 = lambda value: (-2 ** 63) <= value <= (2 ** 63 - 1)
-is_float = lambda value: (-1 / 1.18e38) <= value <= (3.4e38)
-is_double = lambda value: (-1 / 2.23e308) <= value <= (1.80e308)
+is_float = lambda value: 1.18e-38 <= abs(value) <= 3.4e38
+is_double = lambda value: 2.23e-308 <= abs(value) < 1.8e308 # 1.8e308 is inf
 
 def pack_data(pattern, data):
     return struct.pack('>' + pattern, data)
@@ -183,8 +183,8 @@ def encode(value, output=None):
             * int16: if -32768 <= value <= 32767
             * int32: if -2147483648 <= value <= 2147483647
             * int64: if -9223372036854775808 <= value 9223372036854775807
-            * float: if -1/1.18e38 <= value <= 3.4e38
-            * double: if -1/2.23e308 <= value <= 1.80e308
+            * float: if 1.18e-38 <= abs(value) <= 3.4e38
+            * double: if 2.23e-308 <= abs(value) < 1.80e308
 
         Any other values would be encoded as hugeint data.
 
