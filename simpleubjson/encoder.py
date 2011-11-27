@@ -9,11 +9,9 @@
 
 import struct
 from types import GeneratorType, XRangeType
+from simpleubjson import NOOP
 
-#: Noop sentinel value
-NOOP = type('NoopType', (object,), {})()
-
-handlers = {}
+__all__ = ['UBJSONEncoder']
 
 is_byte = lambda value: (-2 ** 7) <= value <= (2 ** 7 - 1)
 is_int16 = lambda value: (-2 ** 15) <= value <= (2 ** 15 - 1)
@@ -22,118 +20,8 @@ is_int64 = lambda value: (-2 ** 63) <= value <= (2 ** 63 - 1)
 is_float = lambda value: 1.18e-38 <= abs(value) <= 3.4e38
 is_double = lambda value: 2.23e-308 <= abs(value) < 1.8e308 # 1.8e308 is inf
 
-def pack_data(pattern, data):
-    return struct.pack('>' + pattern, data)
-
-def pytypes(*names):
-    def decorator(func):
-        for name in names:
-            handlers[name] = func
-        return func
-    return decorator
-
-@pytypes(type(NOOP))
-def handle_noop(value):
-    return ['N']
-
-@pytypes(type(None))
-def handle_none(value):
-    return ['Z']
-
-@pytypes(bool)
-def handle_bool(value):
-    return ['F', 'T'][value]
-
-@pytypes(int, long)
-def handle_number(value):
-    if is_byte(value):
-        return ['B', pack_data('b', value)]
-    elif is_int16(value):
-        return ['i', pack_data('h', value)]
-    elif is_int32(value):
-        return ['I', pack_data('i', value)]
-    elif is_int64(value):
-        return ['L', pack_data('q', value)]
-    else:
-        return encode_huge_value(value)
-
-@pytypes(float)
-def handle_float(value):
-    if is_float(value):
-        return ['d', pack_data('f', value)]
-    elif is_double(value):
-        return ['D', pack_data('d', value)]
-    else:
-        return encode_huge_value(value)
-
-@pytypes(str, unicode)
-def handle_str(value):
-    if isinstance(value, unicode):
-        value = value.encode('utf-8')
-    length = len(value)
-    if length < 255:
-        return ['s', pack_data('B', length),
-                     pack_data('%ds' % length, value)]
-    else:
-        return ['S', pack_data('I', length),
-                     pack_data('%ds' % length, value)]
-
-@pytypes(tuple, list)
-def handle_array(value):
-    size = len(value)
-    if size < 255:
-        yield 'a'
-        yield pack_data('B', size)
-    else:
-        yield 'A'
-        yield pack_data('I', size)
-    for item in value:
-        yield ''.join(encode(item))
-
-@pytypes(GeneratorType, XRangeType)
-def handle_generator(value):
-    yield 'a'
-    yield '\xff'
-    for item in value:
-        yield encode(item)
-    yield 'E'
-
-@pytypes(dict)
-def handle_dict(value):
-    size = len(value)
-    if size < 255:
-        yield 'o'
-        yield pack_data('B', size)
-    else:
-        yield 'O'
-        yield pack_data('I', size)
-    for key, val in value.items():
-        yield encode(key)
-        yield encode(val)
-        
-def encode_huge_value(value):
-    value = str(value)
-    size = len(value)
-    if size < 255:
-        return ['h', pack_data('B', size),
-                     pack_data('%ds' % size, value)]
-    else:
-        return ['H', pack_data('I', size),
-                     pack_data('%ds' % size, value)]
-
-def encode(value, output=None):
-    """Encodes Python object to Universal Binary JSON data.
-
-    :param value: Python object.
-    :param output: `.write([data])`-able object.
-
-    :return: Encoded Python object. See mapping table below.
-             If `output` param is specified, all data would be written into it
-             by chunks and None will be returned.
-
-    :raises:
-        * TypeError if no handlers specified for passed value type.
-        * ValueError if unable to pack Python value to binary form.
+class UBJSONEncoder(object):
+    """Base encoder of Python objects to UBJSON data that follows next rules:
 
     +----------------------------+----------------------------+-------+
     | Python type                | UBJSON type                | Notes |
@@ -192,16 +80,144 @@ def encode(value, output=None):
         Depending on value length it would be encoded to short data version
         to long one.
     """
-    handler = handlers.get(type(value))
-    if handler is None:
-        raise TypeError('No handlers for value type %s' % type(value))
-    try:
-        data = handler(value)
+    def __init__(self, default=None, **handlers):
+        d = {}
+        dict_keysiterator = type(d.iteritems())
+        dict_valuesiterator = type(d.iteritems())
+        dict_itemsiterator = type(d.iteritems())
+
+        self._handlers = {
+            type(None): self.encode_none,
+            bool: self.encode_bool,
+            int: self.encode_number,
+            long: self.encode_number,
+            float: self.encode_float,
+            basestring: self.encode_str,
+            tuple: self.encode_array,
+            list: self.encode_array,
+            dict_keysiterator: self.encode_generator,
+            dict_valuesiterator: self.encode_generator,
+            dict_itemsiterator: self.encode_generator,
+            XRangeType: self.encode_generator,
+            GeneratorType: self.encode_generator,
+            dict: self.encode_dict
+        }
+        self._handlers.update(handlers)
+        if default is not None:
+            self.encode_default = default
+
+    def pack_data(self, pattern, data):
+        return struct.pack('>' + pattern, data)
+
+    def encode(self, value, output=None):
         if output is None:
-            return ''.join(data)
+            return ''.join(self.iterencode(value))
+        for chunk in self.iterencode(value):
+            output.write(chunk)
+
+    def iterencode(self, value):
+        handler = self.get_handler(value)
+        for chunk in handler(value):
+            yield chunk
+
+    def get_handler(self, value):
+        if value is NOOP:
+            return self.encode_noop
+        tval = type(value)
+        maybe_handler = None
+        for pytype, handler in self._handlers.items():
+            if tval is pytype:
+                return handler
+            if isinstance(value, pytype):
+                maybe_handler = handler
+        if maybe_handler is not None:
+            return maybe_handler
+        return self.encode_default
+
+    def encode_default(self, value):
+        raise TypeError('Unable to encode %r to ubjson' % value)
+
+    def encode_noop(self, value):
+        yield 'N'
+
+    def encode_none(self, value):
+        yield 'Z'
+
+    def encode_bool(self, value):
+        yield ['F', 'T'][value]
+
+    def encode_number(self, value):
+        if is_byte(value):
+            return ['B', self.pack_data('b', value)]
+        elif is_int16(value):
+            return ['i', self.pack_data('h', value)]
+        elif is_int32(value):
+            return ['I', self.pack_data('i', value)]
+        elif is_int64(value):
+            return ['L', self.pack_data('q', value)]
         else:
-            for chunk in data:
-                output.write(chunk)
-    except struct.error, err:
-        raise ValueError('Unable to encode value %s (first 100 bytes),'
-                         ' reason:\n%s' % (repr(value)[:100], err))
+            return self.encode_huge_value(value)
+
+    def encode_float(self, value):
+        if is_float(value):
+            return ['d', self.pack_data('f', value)]
+        elif is_double(value):
+            return ['D', self.pack_data('d', value)]
+        else:
+            return self.encode_huge_value(value)
+
+    def encode_str(self, value):
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+        length = len(value)
+        if length < 255:
+            return ['s', self.pack_data('B', length),
+                         self.pack_data('%ds' % length, value)]
+        else:
+            return ['S', self.pack_data('I', length),
+                         self.pack_data('%ds' % length, value)]
+
+    def encode_array(self, value):
+        size = len(value)
+        if size < 255:
+            yield 'a'
+            yield self.pack_data('B', size)
+        else:
+            yield 'A'
+            yield self.pack_data('I', size)
+        for item in value:
+            for chunk in self.iterencode(item):
+                yield chunk
+
+    def encode_generator(self, value):
+        yield 'a'
+        yield '\xff'
+        for item in value:
+            for chunk in self.iterencode(item):
+                yield chunk
+        yield 'E'
+
+    def encode_dict(self, value):
+        size = len(value)
+        if size < 255:
+            yield 'o'
+            yield self.pack_data('B', size)
+        else:
+            yield 'O'
+            yield self.pack_data('I', size)
+        for key, val in value.items():
+            assert isinstance(key, basestring)
+            for chunk in self.iterencode(key):
+                yield chunk
+            for chunk in self.iterencode(val):
+                yield chunk
+
+    def encode_huge_value(self, value):
+        value = str(value)
+        size = len(value)
+        if size < 255:
+            return ['h', self.pack_data('B', size),
+                         self.pack_data('%ds' % size, value)]
+        else:
+            return ['H', self.pack_data('I', size),
+                         self.pack_data('%ds' % size, value)]
