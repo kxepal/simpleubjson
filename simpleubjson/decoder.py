@@ -63,7 +63,8 @@ class UBJSONDecoder(object):
     Notes:
 
     (1)
-        Noop values are ignored.
+        Noop values are ignored by default if only `allow_noop` argument wasn't
+        passed as ``True``.
 
     (2)
         Nested generators are automatically converted to lists.
