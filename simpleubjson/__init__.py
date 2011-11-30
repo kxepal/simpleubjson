@@ -51,11 +51,18 @@ def decode(data, default=None, handlers=None):
     return UBJSONDecoder(**kwargs).decode(data)
 
 
-def encode(data, output=None):
+def encode(data, output=None, default=None, handlers=None):
     """Encodes Python object to Universal Binary JSON data.
 
     :param data: Python object.
-    :param output: `.write([data])`-able object.
+    :param output: `.write([data])`-able object. If omitted result would be
+                   returned instead of written into.
+    :param default: Callable object that would be used if there is no handlers
+                    matched for Python data type.
+                    Takes 2 arguments of encoder instance and encodable value.
+    :param handlers: Custom set of handlers where key is Python type and
+                     value is any callable that takes encoder instance and
+                     encodable value.
 
     :return: Encoded Python object. See mapping table below.
              If `output` param is specified, all data would be written into it
@@ -65,4 +72,10 @@ def encode(data, output=None):
         * TypeError if no handlers specified for passed value type.
         * ValueError if unable to pack Python value to binary form.
     """
-    return _default_encoder.encode(data, output)
+    if default is None and handlers is None:
+        return _default_encoder.encode(data, output)
+    kwargs = {
+        'default': default,
+        'handlers': handlers
+    }
+    return UBJSONEncoder(**kwargs).encode(data, output)

@@ -8,7 +8,7 @@
 #
 
 import struct
-from types import GeneratorType, XRangeType
+from types import GeneratorType, XRangeType, MethodType
 from simpleubjson import NOOP
 
 __all__ = ['UBJSONEncoder']
@@ -80,7 +80,7 @@ class UBJSONEncoder(object):
         Depending on value length it would be encoded to short data version
         to long one.
     """
-    def __init__(self, default=None, **handlers):
+    def __init__(self, default=None, handlers=None):
         d = {}
         dict_keysiterator = type(d.iteritems())
         dict_valuesiterator = type(d.iteritems())
@@ -102,9 +102,13 @@ class UBJSONEncoder(object):
             GeneratorType: self.encode_generator,
             dict: self.encode_dict
         }
-        self._handlers.update(handlers)
         if default is not None:
-            self.encode_default = default
+            self.encode_default = MethodType(default, self)
+        if handlers is not None:
+            for key, handler in handlers.items():
+                if handler is not None:
+                    handlers[key] = MethodType(handler, self)
+            self._handlers.update(handlers)
 
     def pack_data(self, pattern, data):
         return struct.pack('>' + pattern, data)

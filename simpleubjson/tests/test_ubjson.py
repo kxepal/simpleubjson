@@ -71,6 +71,22 @@ class EncoderTestCase(unittest.TestCase):
         simpleubjson.encode((i for i in range(5)), stream)
         self.assertEqual(stream.getvalue(), 'a\xffB\x00B\x01B\x02B\x03B\x04E')
 
+    def test_custom_default_handler(self):
+        sentinel = object()
+        def dummy(self, value):
+            assert value is sentinel
+            return 'sentinel'
+        data = simpleubjson.encode(sentinel, default=dummy)
+        self.assertEqual(data, 'sentinel')
+
+    def test_custom_handler(self):
+        def handle_datetime(self, value):
+            yield 't'
+            yield value.isoformat() + 'Z'
+        data = simpleubjson.encode(datetime.datetime(2009, 2, 13, 23, 31, 30),
+                                   handlers={datetime.datetime: handle_datetime})
+        self.assertEqual(data, 't2009-02-13T23:31:30Z')
+
 
 class NullTestCase(unittest.TestCase):
 
