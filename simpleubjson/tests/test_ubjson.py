@@ -8,6 +8,7 @@
 #
 
 import datetime
+import time
 import unittest
 import simpleubjson
 from StringIO import StringIO
@@ -39,7 +40,8 @@ class DecoderTestCase(unittest.TestCase):
     def test_custom_handler(self):
         def handle_datetime(self, stream):
             value = stream.read(20)
-            return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+            struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
+            return datetime.datetime(*struct_time)
         data = simpleubjson.decode('t2009-02-13T23:31:30Z',
                                    handlers={'t': handle_datetime})
         self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
@@ -48,7 +50,8 @@ class DecoderTestCase(unittest.TestCase):
         def handle_str_or_datetime(self, stream):
             value = self.decode_str(stream)
             try:
-                return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+                struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
+                return datetime.datetime(*struct_time)
             except ValueError:
                 return value
         data = simpleubjson.decode('s\x142009-02-13T23:31:30Z',
