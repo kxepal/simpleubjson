@@ -371,6 +371,25 @@ class StreamTestCase(unittest.TestCase):
         data = simpleubjson.decode('o\xffB\x03s\x03fooE')
         self.assertRaises(ValueError, list, data)
 
+    def test_allow_emit_noop_for_arrays(self):
+        data = simpleubjson.decode('a\xffB\x00NB\x01NB\x02NB\x03NB\x04E',
+                                   allow_noop=True)
+        N = simpleubjson.NOOP
+        self.assertEqual(list(data), [0, N, 1, N, 2, N, 3, N, 4])
+
+    def test_allow_emit_noop_for_objects(self):
+        data = simpleubjson.decode('o\xffNs\x03fooNs\x03barNE', allow_noop=True)
+        self.assertTrue(isinstance(data, GeneratorType))
+        data = list(data)
+        N = simpleubjson.NOOP
+        self.assertEqual(data, [(N, N), ('foo', 'bar'), (N, N)])
+        self.assertEqual(dict(data), {'foo': 'bar', N: N})
+
+        data = simpleubjson.decode('a\xffB\x00NB\x01NB\x02NB\x03NB\x04E',
+                                   allow_noop=True)
+        N = simpleubjson.NOOP
+        self.assertEqual(list(data), [0, N, 1, N, 2, N, 3, N, 4])
+
 
 class ObjectTestCase(unittest.TestCase):
 

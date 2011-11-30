@@ -17,7 +17,7 @@ from simpleubjson.encoder import UBJSONEncoder
 _default_decoder = UBJSONDecoder()
 _default_encoder = UBJSONEncoder()
 
-def decode(data, default=None, handlers=None):
+def decode(data, default=None, handlers=None, allow_noop=False):
     """Decodes input stream of UBJSON data to Python object.
 
     :param data: `.read([size])`-able object or source string.
@@ -29,6 +29,9 @@ def decode(data, default=None, handlers=None):
                      data stream. Setting marker handler to None removes support
                      of it.
     :type handlers: dict
+    :param allow_noop: Allow to emit :const:`~simplejson.NOOP` values for
+                       unsized arrays and objects.
+    :type allow_noop: bool
 
     :return: Decoded Python object. See mapping table below.
 
@@ -42,11 +45,12 @@ def decode(data, default=None, handlers=None):
     """
     if isinstance(data, basestring):
         data = StringIO(data)
-    if default is None and handlers is None:
+    if default is None and handlers is None and not allow_noop:
         return _default_decoder.decode(data)
     kwargs = {
         'default': default,
-        'handlers': handlers
+        'handlers': handlers,
+        'allow_noop': allow_noop
     }
     return UBJSONDecoder(**kwargs).decode(data)
 

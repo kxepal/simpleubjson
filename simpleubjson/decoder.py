@@ -9,6 +9,7 @@
 
 import struct
 from types import GeneratorType, MethodType
+from simpleubjson import NOOP
 
 __all__ = ['UBJSONDecoder']
 
@@ -71,7 +72,7 @@ class UBJSONDecoder(object):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    def __init__(self, default=None, handlers=None):
+    def __init__(self, default=None, handlers=None, allow_noop=False):
         self._handlers = {
             'N': self.decode_noop,
             'Z': self.decode_null,
@@ -93,6 +94,7 @@ class UBJSONDecoder(object):
             'O': self.decode_object_ex,
             'E': self.decode_eos,
         }
+        self.allow_noop = allow_noop
         if default is not None:
             self.decode_default = MethodType(default, self)
         if handlers is not None:
@@ -217,7 +219,11 @@ class UBJSONDecoder(object):
 
     def decode_unsized_array(self, stream):
         while True:
-            marker, handler = self.skip_noop(stream)
+            marker, handler = self.next_marker(stream)
+            if marker == 'N':
+                if self.allow_noop:
+                    yield NOOP
+                continue
             if not marker:
                 raise ValueError('Unexpected stream end')
             item = handler(stream)
@@ -249,7 +255,11 @@ class UBJSONDecoder(object):
 
     def decode_unsized_object(self, stream):
         while True:
-            marker, handler = self.skip_noop(stream)
+            marker, handler = self.next_marker(stream)
+            if marker == 'N':
+                if self.allow_noop:
+                    yield NOOP, NOOP
+                continue
             if not marker:
                 raise ValueError('Unexpected stream end')
             if marker not in 'sSE':
