@@ -6,6 +6,9 @@
 Welcome to simpleubjson's documentation!
 ========================================
 
+.. automodule:: simpleubjson
+  :members:
+
 .. automodule:: simpleubjson.decoder
   :members:
 
