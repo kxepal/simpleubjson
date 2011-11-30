@@ -8,7 +8,7 @@
 #
 
 import struct
-from types import GeneratorType
+from types import GeneratorType, MethodType
 
 __all__ = ['UBJSONDecoder']
 
@@ -94,8 +94,11 @@ class UBJSONDecoder(object):
             'E': self.decode_eos,
         }
         if default is not None:
-            self.decode_default = default
+            self.decode_default = MethodType(default, self)
         if handlers is not None:
+            for key, handler in handlers.items():
+                if handler is not None:
+                    handlers[key] = MethodType(handler, self)
             self._handlers.update(handlers)
 
     def decode(self, stream):

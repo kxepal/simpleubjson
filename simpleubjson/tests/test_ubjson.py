@@ -7,6 +7,7 @@
 # you should have received as part of this distribution.
 #
 
+import datetime
 import unittest
 import simpleubjson
 from StringIO import StringIO
@@ -27,6 +28,37 @@ class DecoderTestCase(unittest.TestCase):
 
     def test_fail_on_unknown_marker(self):
         self.assertRaises(ValueError, simpleubjson.decode, 'Я')
+
+    def test_custom_default_handler(self):
+        def dummy(self, marker, stream):
+            assert marker == '%'
+            return 'foo'
+        data = simpleubjson.decode('%', default=dummy)
+        self.assertEqual(data, 'foo')
+
+    def test_custom_handler(self):
+        def handle_datetime(self, stream):
+            value = stream.read(20)
+            return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+        data = simpleubjson.decode('t2009-02-13T23:31:30Z', 
+                                   handlers={'t': handle_datetime})
+        self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
+
+    def test_override_builtin_handler(self):
+        def handle_str_or_datetime(self, stream):
+            value = self.decode_str(stream)
+            try:
+                return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+            except ValueError:
+                return value
+        data = simpleubjson.decode('s\x142009-02-13T23:31:30Z',
+                                   handlers={'s': handle_str_or_datetime})
+        self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
+
+    def test_unsupported_marker(self):
+        self.assertRaises(ValueError,
+                          simpleubjson.decode,
+                          'a\xffB\x00E', handlers={'a': None})
 
 
 class EncoderTestCase(unittest.TestCase):
