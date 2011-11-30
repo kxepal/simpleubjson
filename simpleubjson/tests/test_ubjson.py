@@ -40,7 +40,7 @@ class DecoderTestCase(unittest.TestCase):
         def handle_datetime(self, stream):
             value = stream.read(20)
             return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
-        data = simpleubjson.decode('t2009-02-13T23:31:30Z', 
+        data = simpleubjson.decode('t2009-02-13T23:31:30Z',
                                    handlers={'t': handle_datetime})
         self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
 
@@ -348,12 +348,13 @@ class StreamTestCase(unittest.TestCase):
         self.assertRaises(ValueError, list, simpleubjson.decode('o\xff'))
 
     def test_fail_decode_on_early_eos(self):
-        data = simpleubjson.decode('o\xff\s\x03fooE')
+        data = simpleubjson.decode('o\xffs\x03fooE')
         self.assertRaises(ValueError, list, data)
 
     def test_fail_decode_object_with_nonstring_key(self):
-        data = simpleubjson.decode('o\xff\B\x03\s\x03fooE')
+        data = simpleubjson.decode('o\xffB\x03s\x03fooE')
         self.assertRaises(ValueError, list, data)
+
 
 class ObjectTestCase(unittest.TestCase):
 
