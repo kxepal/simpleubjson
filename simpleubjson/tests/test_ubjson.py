@@ -216,6 +216,18 @@ class HugeNumberTestCase(unittest.TestCase):
         data = simpleubjson.decode(source)
         self.assertEqual(data, expected)
 
+    def test_decode_huge_float(self):
+        source = 'h\x35-3.14159265358979323846264338327950288419716939937510'
+        expected = '-3.14159265358979323846264338327950288419716939937510'
+        data = simpleubjson.decode(source)
+        self.assertEqual(data, expected)
+
+    def test_decode_exp_number(self):
+        source = 'h\x052e+10'
+        expected = '2e+10'
+        data = simpleubjson.decode(source)
+        self.assertEqual(data, expected)
+
     def test_encode(self):
         source = 314159265358979323846264338327950288419716939937510
         expected = 'h\x33314159265358979323846264338327950288419716939937510'
