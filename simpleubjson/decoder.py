@@ -209,7 +209,7 @@ class UBJSONDecoder(object):
 
     def decode_sized_array(self, stream, size):
         for round in xrange(size):
-            marker, handler = self.next_marker(stream)
+            marker, handler = self.skip_noop(stream)
             if marker in 'E':
                 raise ValueError('Unexpected marker %r' % marker)
             item = handler(stream)
@@ -234,7 +234,7 @@ class UBJSONDecoder(object):
                 yield item
 
     def decode_object_key(self, stream):
-        marker, handler = self.next_marker(stream)
+        marker, handler = self.skip_noop(stream)
         if not (marker or handler):
             raise ValueError('Unexpected stream end')
         if marker not in 'sS':
@@ -244,7 +244,7 @@ class UBJSONDecoder(object):
     def decode_sized_object(self, stream, size):
         for round in xrange(size):
             key = self.decode_object_key(stream)
-            marker, handler = self.next_marker(stream)
+            marker, handler = self.skip_noop(stream)
             try:
                 item = handler(stream)
             except StopIteration:
