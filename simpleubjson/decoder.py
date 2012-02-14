@@ -19,7 +19,7 @@ class UBJSONDecoder(object):
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
     +========+============================+============================+=======+
-    | ``N``  | noop                       |                            | \(1)  |
+    | ``N``  | noop                       | :const:`~simpleubjson.NOOP`| \(1)  |
     +--------+----------------------------+----------------------------+-------+
     | ``Z``  | null                       | None                       |       |
     +--------+----------------------------+----------------------------+-------+
@@ -137,7 +137,7 @@ class UBJSONDecoder(object):
         raise ValueError('Unable to decode data with marker %r' % marker)
 
     def decode_noop(self, stream):
-        raise ValueError('Noop value was not expected')
+        return NOOP
 
     def decode_eos(self, stream):
         raise StopIteration
