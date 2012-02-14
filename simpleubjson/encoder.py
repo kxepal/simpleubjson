@@ -19,6 +19,7 @@ is_int32 = lambda value: (-2 ** 31) <= value <= (2 ** 31 - 1)
 is_int64 = lambda value: (-2 ** 63) <= value <= (2 ** 63 - 1)
 is_float = lambda value: 1.18e-38 <= abs(value) <= 3.4e38
 is_double = lambda value: 2.23e-308 <= abs(value) < 1.8e308 # 1.8e308 is inf
+is_infinity = lambda value: value == float('inf') or value == float('-inf')
 
 class UBJSONEncoder(object):
     """Base encoder of Python objects to UBJSON data that follows next rules:
@@ -167,6 +168,8 @@ class UBJSONEncoder(object):
             return ['d', self.pack_data('f', value)]
         elif is_double(value):
             return ['D', self.pack_data('d', value)]
+        elif is_infinity(value):
+            return ['Z']
         else:
             return self.encode_huge_value(value)
 
