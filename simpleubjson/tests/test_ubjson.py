@@ -91,6 +91,17 @@ class EncoderTestCase(unittest.TestCase):
         self.assertEqual(data, 't2009-02-13T23:31:30Z')
 
 
+class NoopTestCase(unittest.TestCase):
+
+    def test_decode(self):
+        data = simpleubjson.decode('N', allow_noop=True)
+        self.assertTrue(data is simpleubjson.NOOP)
+
+    def test_encode(self):
+        data = simpleubjson.encode(simpleubjson.NOOP)
+        self.assertEqual(data, 'N')
+
+
 class NullTestCase(unittest.TestCase):
 
     def test_decode(self):
