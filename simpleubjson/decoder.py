@@ -228,10 +228,9 @@ class UBJSONDecoder(object):
             if marker in 'E':
                 raise ValueError('Unexpected marker %r' % marker)
             item = handler(stream)
-            if isinstance(item, GeneratorType):
-                yield list(item)
-            else:
-                yield item
+            if marker in 'ao' and isinstance(item, GeneratorType):
+                item = list(item)
+            yield item
 
     def decode_unsized_array(self, stream):
         while True:
@@ -243,10 +242,9 @@ class UBJSONDecoder(object):
             if not marker:
                 raise ValueError('Unexpected stream end')
             item = handler(stream)
-            if isinstance(item, GeneratorType):
-                yield list(item)
-            else:
-                yield item
+            if marker in 'ao' and isinstance(item, GeneratorType):
+                item = list(item)
+            yield item
 
     def decode_object_key(self, stream):
         marker, handler = self.skip_noop(stream)
@@ -261,13 +259,12 @@ class UBJSONDecoder(object):
             key = self.decode_object_key(stream)
             marker, handler = self.skip_noop(stream)
             try:
-                item = handler(stream)
+                value = handler(stream)
             except StopIteration:
                 raise ValueError('Unexpected end of stream event')
-            if isinstance(item, GeneratorType):
-                yield key, list(item)
-            else:
-                yield key, item
+            if marker in 'ao' and isinstance(value, GeneratorType):
+                value = list(value)
+            yield key, value
 
     def decode_unsized_object(self, stream):
         while True:
@@ -288,7 +285,6 @@ class UBJSONDecoder(object):
             except StopIteration:
                 raise ValueError('Value for key %r expected,'
                                  ' but stream end reached'  % key)
-            if isinstance(value, GeneratorType):
-                yield list(value)
-            else:
-                yield key, value
+            if marker in 'ao' and isinstance(value, GeneratorType):
+                value = list(value)
+            yield key, value
