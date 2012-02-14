@@ -8,10 +8,17 @@
 #
 
 import struct
+import re
 from types import GeneratorType, MethodType
 from simpleubjson import NOOP
 
 __all__ = ['UBJSONDecoder']
+
+REX_NUMBER = re.compile('^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$')
+
+def is_number(s):
+    return s.isdigit() or REX_NUMBER.match(s) is not None
+
 
 class UBJSONDecoder(object):
     """Base decoder of UBJSON data to Python object that follows next rules:
@@ -171,11 +178,19 @@ class UBJSONDecoder(object):
 
     def decode_hugeint(self, stream):
         size = self.unpack_data('B', stream.read(1))
-        return self.unpack_data('%ds' % size, stream.read(size))
+        value = self.unpack_data('%ds' % size, stream.read(size))
+        if not is_number(value):
+            raise ValueError('Value of huge type should be numeric, not %r'
+                             '' % value)
+        return value
 
     def decode_hugeint_ex(self, stream):
         size = self.unpack_data('I', stream.read(4))
-        return self.unpack_data('%ds' % size, stream.read(size))
+        value = self.unpack_data('%ds' % size, stream.read(size))
+        if not is_number(value):
+            raise ValueError('Value of huge type should be numeric, not %r'
+                             '' % value)
+        return value
 
     def decode_str(self, stream):
         size = self.unpack_data('B', stream.read(1))
