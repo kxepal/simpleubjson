@@ -113,10 +113,10 @@ class UBJSONDecoder(object):
         return handler(stream)
 
     def get_handler(self, marker):
-        handler = self._handlers.get(marker)
-        if handler is None:
-            return (lambda stream: self.decode_default(marker, stream))
-        return handler
+        return self._handlers.get(
+            marker,
+            lambda stream: self.decode_default(marker, stream)
+        )
 
     def unpack_data(self, pattern, data):
         return struct.unpack('>' + pattern, data)[0]
