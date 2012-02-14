@@ -125,8 +125,8 @@ class UBJSONDecoder(object):
             lambda stream: self.decode_default(marker, stream)
         )
 
-    def unpack_data(self, pattern, data):
-        return struct.unpack('>' + pattern, data)[0]
+    def unpack_data(self, pattern, data, _unpack=struct.unpack):
+        return _unpack(pattern, data)[0]
 
     def next_marker(self, stream):
         marker = stream.read(1)
@@ -159,67 +159,67 @@ class UBJSONDecoder(object):
         return True
 
     def decode_byte(self, stream):
-        return self.unpack_data('b', stream.read(1))
+        return self.unpack_data('>b', stream.read(1))
 
     def decode_int16(self, stream):
-        return self.unpack_data('h', stream.read(2))
+        return self.unpack_data('>h', stream.read(2))
 
     def decode_int32(self, stream):
-        return self.unpack_data('i', stream.read(4))
+        return self.unpack_data('>i', stream.read(4))
 
     def decode_int64(self, stream):
-        return self.unpack_data('q', stream.read(8))
+        return self.unpack_data('>q', stream.read(8))
 
     def decode_float(self, stream):
-        return self.unpack_data('f', stream.read(4))
+        return self.unpack_data('>f', stream.read(4))
 
     def decode_double(self, stream):
-        return self.unpack_data('d', stream.read(8))
+        return self.unpack_data('>d', stream.read(8))
 
     def decode_hugeint(self, stream):
-        size = self.unpack_data('B', stream.read(1))
-        value = self.unpack_data('%ds' % size, stream.read(size))
+        size = self.unpack_data('>B', stream.read(1))
+        value = self.unpack_data('>%ds' % size, stream.read(size))
         if not is_number(value):
             raise ValueError('Value of huge type should be numeric, not %r'
                              '' % value)
         return value
 
     def decode_hugeint_ex(self, stream):
-        size = self.unpack_data('I', stream.read(4))
-        value = self.unpack_data('%ds' % size, stream.read(size))
+        size = self.unpack_data('>I', stream.read(4))
+        value = self.unpack_data('>%ds' % size, stream.read(size))
         if not is_number(value):
             raise ValueError('Value of huge type should be numeric, not %r'
                              '' % value)
         return value
 
     def decode_str(self, stream):
-        size = self.unpack_data('B', stream.read(1))
-        return self.unpack_data('%ds' % size, stream.read(size)).decode('utf-8')
+        size = self.unpack_data('>B', stream.read(1))
+        return self.unpack_data('>%ds' % size, stream.read(size)).decode('utf-8')
 
     def decode_str_ex(self, stream):
-        size = self.unpack_data('I', stream.read(4))
-        return self.unpack_data('%ds' % size, stream.read(size)).decode('utf-8')
+        size = self.unpack_data('>I', stream.read(4))
+        return self.unpack_data('>%ds' % size, stream.read(size)).decode('utf-8')
 
     def decode_array(self, stream):
-        size = self.unpack_data('B', stream.read(1))
+        size = self.unpack_data('>B', stream.read(1))
         if size == 255:
             return self.decode_unsized_array(stream)
         else:
             return list(self.decode_sized_array(stream, size))
 
     def decode_array_ex(self, stream):
-        size = self.unpack_data('I', stream.read(4))
-        return [self.decode(stream) for item in xrange(size)]
+        size = self.unpack_data('>I', stream.read(4))
+        return list(self.decode_sized_array(stream, size))
 
     def decode_object(self, stream):
-        size = self.unpack_data('B', stream.read(1))
+        size = self.unpack_data('>B', stream.read(1))
         if size == 255:
             return self.decode_unsized_object(stream)
         else:
             return dict(self.decode_sized_object(stream, size))
 
     def decode_object_ex(self, stream):
-        size = self.unpack_data('I', stream.read(4))
+        size = self.unpack_data('>I', stream.read(4))
         return dict(self.decode_sized_object(stream, size))
 
     def decode_sized_array(self, stream, size):
