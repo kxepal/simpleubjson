@@ -211,6 +211,14 @@ class HugeNumberTestCase(unittest.TestCase):
         data = simpleubjson.encode(source)
         self.assertEqual(data, expected)
 
+    def test_fail_on_invalid_numeric_value(self):
+        source = 'h\x33314159 65358979323846264338327950288419716939937510'
+        self.assertRaises(ValueError, simpleubjson.decode, source)
+
+    def test_fail_on_non_numeric_value(self):
+        source = 'h\x09foobarbaz'
+        self.assertRaises(ValueError, simpleubjson.decode, source)
+
 
 class FloatTestCase(unittest.TestCase):
 
@@ -257,6 +265,10 @@ class FloatTestCase(unittest.TestCase):
     def test_encode_too_huge_value(self):
         data = simpleubjson.encode(1.79e308)
         self.assertEqual(data, 'D\x7f\xef\xdc\xf1\x58\xad\xbb\x99')
+
+    def test_encode_inf_value_as_null(self):
+        self.assertEqual(simpleubjson.encode(float('inf')), 'Z')
+        self.assertEqual(simpleubjson.encode(float('-inf')), 'Z')
 
 
 class StringTestCase(unittest.TestCase):
@@ -315,9 +327,9 @@ class ArrayTestCase(unittest.TestCase):
         data = 'a\x03B\x01B\x02EB\x03'
         self.assertRaises(ValueError, simpleubjson.decode, data)
 
-    def test_fail_decode_if_noop_marker_occurres_in_sized_array(self):
-        data = 'a\x03B\x01B\x02NB\x03N'
-        self.assertRaises(ValueError, simpleubjson.decode, data)
+    def test_should_skip_noop_markers_in_sized_array(self):
+        data = simpleubjson.decode('a\x03B\x01B\x02NB\x03N')
+        self.assertEqual(data, [1, 2, 3])
 
 
 class StreamTestCase(unittest.TestCase):
@@ -413,9 +425,9 @@ class ObjectTestCase(unittest.TestCase):
         data = 'o\x02s\x03foos\x03bars\x03barEs\x03baz'
         self.assertRaises(ValueError, simpleubjson.decode, data)
 
-    def test_fail_decode_if_noop_marker_occurres_in_sized_object(self):
-        data = 'o\x02s\x03foos\x03barNNNs\x03barEs\x03baz'
-        self.assertRaises(ValueError, simpleubjson.decode, data)
+    def test_should_skip_noop_markers_in_sized_object(self):
+        data = simpleubjson.decode('o\x02s\x03foos\x03barNNNs\x03bars\x03baz')
+        self.assertEqual(data, {'foo': 'bar', 'bar': 'baz'})
 
     def test_fail_decode_non_string_object_keys(self):
         self.assertRaises(ValueError, simpleubjson.decode, 'o\x01B\x03s\x03bar')
