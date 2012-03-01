@@ -391,6 +391,11 @@ class StreamTestCase(unittest.TestCase):
         self.assertTrue(isinstance(item, list))
         self.assertEqual(item, [('foo', 42)])
 
+    def test_decode_nested_unsized_values(self):
+        data = simpleubjson.decode('a\xffa\xffB\x2aEo\xffs\x03fooB\x2aEE')
+        result = list(data)
+        self.assertEqual(result, [[42], [('foo', 42)]])
+
     def test_encode_xrange(self):
         data = simpleubjson.encode(xrange(4))
         self.assertEqual(data, 'a\xffB\x00B\x01B\x02B\x03E')
@@ -457,6 +462,20 @@ class ObjectTestCase(unittest.TestCase):
 
     def test_fail_decode_on_early_end(self):
         self.assertRaises(ValueError, simpleubjson.decode, 'o\x01')
+
+
+class UbjsonSamplesTestCase(unittest.TestCase):
+
+    def test_a_lot_of_nested_streams(self):
+        def gen_data():
+            return ''.join(['a', '\xff'] + ['a', '\xff', 'N', 'Z', 'N'] * 8192
+                                         + ['E'] * 8192 + ['E'])
+        data = StringIO(gen_data())
+
+        try:
+            list(simpleubjson.decode(data))
+        except RuntimeError, err:
+            self.fail(str(err))
 
 
 if __name__ == '__main__':
