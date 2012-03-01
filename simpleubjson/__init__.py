@@ -29,7 +29,7 @@ def decode(data, default=None, handlers=None, allow_noop=False):
                      data stream. Setting marker handler to None removes support
                      of it.
     :type handlers: dict
-    :param allow_noop: Allow to emit :const:`~simplejson.NOOP` values for
+    :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
     :type allow_noop: bool
 
