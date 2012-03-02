@@ -9,7 +9,7 @@
 
 import struct
 import re
-from types import GeneratorType, MethodType
+from types import GeneratorType
 from simpleubjson import NOOP, EOS
 
 __all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
@@ -130,110 +130,48 @@ class UBJSONDecoder(object):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    def __init__(self):
-        self._handlers = {
-            'N': self.decode_noop,
-            'Z': self.decode_null,
-            'F': self.decode_false,
-            'T': self.decode_true,
-            'B': self.decode_byte,
-            'i': self.decode_int16,
-            'I': self.decode_int32,
-            'L': self.decode_int64,
-            'd': self.decode_float,
-            'D': self.decode_double,
-            'h': self.decode_hugeint,
-            'H': self.decode_hugeint_ex,
-            's': self.decode_str,
-            'S': self.decode_str_ex,
-            'a': self.decode_array,
-            'A': self.decode_array_ex,
-            'o': self.decode_object,
-            'O': self.decode_object_ex,
-            'E': self.decode_eos,
-        }
 
     def decode(self, stream):
-        for marker, size, data in stream:
-            handler = self.get_handler(marker)
-            return handler(stream, marker, size, data)
-        raise ValueError('Nothing to decode')
+        for marker, size, value in stream:
+            return self.decode_tlv(stream, marker, size, value)
+        raise ValueError('nothing to decode')
 
-    def get_handler(self, marker):
-        return (self._handlers.get(marker)
-                or (lambda s, t, l, v: self.decode_default(s, t, l, v)))
-
-    def decode_default(self, stream, marker, size, data):
-        raise ValueError('Unable to decode data with marker %r' % marker)
-
-    def decode_noop(self, stream, marker, size, data):
-        return NOOP
-
-    def decode_eos(self, stream, marker, size, data):
-        return EOS
-
-    def decode_null(self, stream, marker, size, data):
-        return None
-
-    def decode_false(self, stream, marker, size, data):
-        return False
-
-    def decode_true(self, stream, marker, size, data):
-        return True
-
-    def decode_byte(self, stream, marker, size, data):
-        return data
-
-    def decode_int16(self, stream, marker, size, data):
-        return data
-
-    def decode_int32(self, stream, marker, size, data):
-        return data
-
-    def decode_int64(self, stream, marker, size, data):
-        return data
-
-    def decode_float(self, stream, marker, size, data):
-        return data
-
-    def decode_double(self, stream, marker, size, data):
-        return data
-
-    def decode_hugeint(self, stream, marker, size, data):
-        if not is_number(data):
-            raise ValueError('Value of huge type should be numeric, not %r'
-                             '' % data)
-        return data
-
-    def decode_hugeint_ex(self, stream, marker, size, data):
-        if not is_number(data):
-            raise ValueError('Value of huge type should be numeric, not %r'
-                             '' % data)
-        return data
-
-    def decode_str(self, stream, marker, size, data):
-        return data.decode('utf-8')
-
-    def decode_str_ex(self, stream, marker, size, data):
-        return data.decode('utf-8')
-
-    def decode_array(self, stream, marker, size, data):
-        if size == 255:
-            return self.decode_unsized_array(stream)
-        else:
+    def decode_tlv(self, stream, marker, size, value):
+        if marker in 'BiILdD':
+            return value
+        elif marker in 'sShH':
+            if marker in 'sS':
+                return value.decode('utf-8')
+            elif not is_number(value):
+                raise ValueError('Value of huge type should be numeric,'
+                                 ' not %r' % value)
+            return value
+        elif marker == 'a':
+            if size == 255:
+                return self.decode_unsized_array(stream)
+            else:
+                return list(self.decode_sized_array(stream, size))
+        elif marker == 'A':
             return list(self.decode_sized_array(stream, size))
-
-    def decode_array_ex(self, stream, marker, size, data):
-        return list(self.decode_sized_array(stream, size))
-
-    def decode_object(self, stream, marker, size, data):
-        if size == 255:
-            return self.decode_unsized_object(stream)
-        else:
+        elif marker == 'o':
+            if size == 255:
+                return self.decode_unsized_object(stream)
+            else:
+                return dict(self.decode_sized_object(stream, size))
+        elif marker == 'O':
             return dict(self.decode_sized_object(stream, size))
-
-    def decode_object_ex(self, stream, marker, size, data):
-        return dict(self.decode_sized_object(stream, size))
+        elif marker == 'F':
+            return False
+        elif marker == 'T':
+            return True
+        elif marker == 'Z':
+            return None
+        elif marker == 'N':
+            return NOOP
+        elif marker == 'E':
+            return EOS
+        else:
+            raise ValueError('Unknown marker %r' % marker)
 
     def decode_sized_array(self, stream, size):
         for round in xrange(size):
