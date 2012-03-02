@@ -134,7 +134,7 @@ class UBJSONDecoder(object):
     def decode(self, stream):
         for marker, size, value in stream:
             return self.decode_tlv(stream, marker, size, value)
-        raise ValueError('nothing to decode')
+        raise ValueError('nothing more to decode')
 
     def decode_tlv(self, stream, marker, size, value):
         if marker in 'BiILdD':
@@ -180,7 +180,7 @@ class UBJSONDecoder(object):
                 if item is not NOOP:
                     break
             if item is EOS:
-                raise ValueError
+                raise ValueError('unexpectable end of stream marker')
             if isinstance(item, GeneratorType):
                 item = list(item)
             yield item
@@ -207,7 +207,7 @@ class UBJSONDecoder(object):
                 if value is not NOOP:
                     break
             if value is EOS:
-                raise ValueError
+                raise ValueError('unexpectable end of stream marker')
             if isinstance(value, GeneratorType):
                 value = list(value)
             yield key, value
@@ -228,7 +228,7 @@ class UBJSONDecoder(object):
                 if value is not NOOP:
                     break
             if value is EOS:
-                raise ValueError
+                raise ValueError('unexpectable end of stream marker')
             if isinstance(value, GeneratorType):
                 value = list(value)
             yield key, value
