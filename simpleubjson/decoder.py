@@ -121,7 +121,7 @@ class UBJSONDecoder(object):
 
     (1)
         Noop values are ignored by default if only `allow_noop` argument wasn't
-        passed as ``True``.
+        passed as ``True`` to :func:`simpleubjson.decoder.stremify` wrapper.
 
     (2)
         Nested generators are automatically converted to lists.
