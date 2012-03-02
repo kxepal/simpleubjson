@@ -38,7 +38,7 @@ class DecoderTestCase(unittest.TestCase):
         self.assertEqual(data, 'foo')
 
     def test_custom_handler(self):
-        def handle_datetime(self, stream):
+        def handle_datetime(self, stream, marker, size, value):
             value = stream.read(20)
             struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
             return datetime.datetime(*struct_time)
@@ -47,8 +47,7 @@ class DecoderTestCase(unittest.TestCase):
         self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
 
     def test_override_builtin_handler(self):
-        def handle_str_or_datetime(self, stream):
-            value = self.decode_str(stream)
+        def handle_str_or_datetime(self, stream, marker, size, value):
             try:
                 struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
                 return datetime.datetime(*struct_time)

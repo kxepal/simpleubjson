@@ -13,7 +13,7 @@ NOOP = type('NoopType', (object,), {'__slots__': ()})()
 EOS = type('EndOfStreamType', (object,), {'__slots__': ()})()
 
 from cStringIO import StringIO
-from simpleubjson.decoder import UBJSONDecoder
+from simpleubjson.decoder import UBJSONDecoder, streamify, MARKERS
 from simpleubjson.encoder import UBJSONEncoder
 
 _default_decoder = UBJSONDecoder()
@@ -47,14 +47,15 @@ def decode(data, default=None, handlers=None, allow_noop=False):
     """
     if isinstance(data, basestring):
         data = StringIO(data)
+    stream = streamify(data)
     if default is None and handlers is None and not allow_noop:
-        return _default_decoder.decode(data)
+        return _default_decoder.decode(stream)
     kwargs = {
         'default': default,
         'handlers': handlers,
         'allow_noop': allow_noop
     }
-    return UBJSONDecoder(**kwargs).decode(data)
+    return UBJSONDecoder(**kwargs).decode(stream)
 
 
 def encode(data, output=None, default=None, handlers=None):

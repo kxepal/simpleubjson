@@ -10,14 +10,58 @@
 import struct
 import re
 from types import GeneratorType, MethodType
-from simpleubjson import NOOP
+from simpleubjson import NOOP, EOS
 
-__all__ = ['UBJSONDecoder']
+__all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
 
 REX_NUMBER = re.compile('^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$')
 
 def is_number(s):
     return s.isdigit() or REX_NUMBER.match(s) is not None
+
+
+MARKERS = {
+    'N': (None, None),
+    'Z': (None, None),
+    'E': (None, None),
+    'F': (None, None),
+    'T': (None, None),
+    'B': (None, '>b'),
+    'i': (None, '>h'),
+    'I': (None, '>i'),
+    'L': (None, '>q'),
+    'd': (None, '>f'),
+    'D': (None, '>d'),
+    's': ('>B', '>%ds'),
+    'S': ('>I', '>%ds'),
+    'h': ('>B', '>%ds'),
+    'H': ('>I', '>%ds'),
+    'a': ('>B', None),
+    'A': ('>I', None),
+    'o': ('>B', None),
+    'O': ('>I', None),
+    }
+
+
+def streamify(source, _unpack=struct.unpack, _calc=struct.calcsize):
+    while True:
+        marker = source.read(1)
+        if not marker:
+            break
+        rule = MARKERS.get(marker)
+        if rule is None:
+            raise ValueError('Unknown marker %r' % marker)
+        size, value = rule
+        if size is None and value is None:
+            yield marker, None, None
+        elif size is None and value is not None:
+            yield marker, None, _unpack(value, source.read(_calc(value)))[0]
+        elif size is not None and value is not None:
+            length = _unpack(size, source.read(_calc(size)))[0]
+            value = value % length
+            yield marker, length, _unpack(value, source.read(_calc(value)))[0]
+        elif size is not None and value is None:
+            yield marker, _unpack(size, source.read(_calc(size)))[0], None
 
 
 class UBJSONDecoder(object):
@@ -112,179 +156,149 @@ class UBJSONDecoder(object):
             self._handlers.update(handlers)
 
     def decode(self, stream):
-        marker, handler = self.skip_noop(stream)
-        if not (marker or handler):
-            raise ValueError('Nothing to decode')
-        if marker and handler is None:
-            raise ValueError('Unsupported marker %r' % marker)
-        return handler(stream)
+        for marker, size, data in stream:
+            if marker == 'N':
+                continue
+            handler = self.get_handler(marker)
+            return handler(stream, marker, size, data)
+        raise ValueError('Nothing to decode')
 
     def get_handler(self, marker):
-        return self._handlers.get(
-            marker,
-            lambda stream: self.decode_default(marker, stream)
-        )
+        return (self._handlers.get(marker)
+                or (lambda s, t, l, v: self.decode_default(s, t, l, v)))
 
-    def unpack_data(self, pattern, data, _unpack=struct.unpack):
-        return _unpack(pattern, data)[0]
-
-    def next_marker(self, stream):
-        marker = stream.read(1)
-        if not marker:
-            return '', None
-        return marker, self.get_handler(marker)
-
-    def skip_noop(self, stream):
-        while True:
-            marker, handler = self.next_marker(stream)
-            if marker != 'N':
-                return marker, handler
-
-    def decode_default(self, marker, stream):
+    def decode_default(self, stream, marker, size, data):
         raise ValueError('Unable to decode data with marker %r' % marker)
 
-    def decode_noop(self, stream):
+    def decode_noop(self, stream, marker, size, data):
         return NOOP
 
-    def decode_eos(self, stream):
-        raise StopIteration
+    def decode_eos(self, stream, marker, size, data):
+        return EOS
 
-    def decode_null(self, stream):
+    def decode_null(self, stream, marker, size, data):
         return None
 
-    def decode_false(self, stream):
+    def decode_false(self, stream, marker, size, data):
         return False
 
-    def decode_true(self, stream):
+    def decode_true(self, stream, marker, size, data):
         return True
 
-    def decode_byte(self, stream):
-        return self.unpack_data('>b', stream.read(1))
+    def decode_byte(self, stream, marker, size, data):
+        return data
 
-    def decode_int16(self, stream):
-        return self.unpack_data('>h', stream.read(2))
+    def decode_int16(self, stream, marker, size, data):
+        return data
 
-    def decode_int32(self, stream):
-        return self.unpack_data('>i', stream.read(4))
+    def decode_int32(self, stream, marker, size, data):
+        return data
 
-    def decode_int64(self, stream):
-        return self.unpack_data('>q', stream.read(8))
+    def decode_int64(self, stream, marker, size, data):
+        return data
 
-    def decode_float(self, stream):
-        return self.unpack_data('>f', stream.read(4))
+    def decode_float(self, stream, marker, size, data):
+        return data
 
-    def decode_double(self, stream):
-        return self.unpack_data('>d', stream.read(8))
+    def decode_double(self, stream, marker, size, data):
+        return data
 
-    def decode_hugeint(self, stream):
-        size = self.unpack_data('>B', stream.read(1))
-        value = self.unpack_data('>%ds' % size, stream.read(size))
-        if not is_number(value):
+    def decode_hugeint(self, stream, marker, size, data):
+        if not is_number(data):
             raise ValueError('Value of huge type should be numeric, not %r'
-                             '' % value)
-        return value
+                             '' % data)
+        return data
 
-    def decode_hugeint_ex(self, stream):
-        size = self.unpack_data('>I', stream.read(4))
-        value = self.unpack_data('>%ds' % size, stream.read(size))
-        if not is_number(value):
+    def decode_hugeint_ex(self, stream, marker, size, data):
+        if not is_number(data):
             raise ValueError('Value of huge type should be numeric, not %r'
-                             '' % value)
-        return value
+                             '' % data)
+        return data
 
-    def decode_str(self, stream):
-        size = self.unpack_data('>B', stream.read(1))
-        return self.unpack_data('>%ds' % size, stream.read(size)).decode('utf-8')
+    def decode_str(self, stream, marker, size, data):
+        return data.decode('utf-8')
 
-    def decode_str_ex(self, stream):
-        size = self.unpack_data('>I', stream.read(4))
-        return self.unpack_data('>%ds' % size, stream.read(size)).decode('utf-8')
+    def decode_str_ex(self, stream, marker, size, data):
+        return data.decode('utf-8')
 
-    def decode_array(self, stream):
-        size = self.unpack_data('>B', stream.read(1))
+    def decode_array(self, stream, marker, size, data):
         if size == 255:
             return self.decode_unsized_array(stream)
         else:
             return list(self.decode_sized_array(stream, size))
 
-    def decode_array_ex(self, stream):
-        size = self.unpack_data('>I', stream.read(4))
+    def decode_array_ex(self, stream, marker, size, data):
         return list(self.decode_sized_array(stream, size))
 
-    def decode_object(self, stream):
-        size = self.unpack_data('>B', stream.read(1))
+    def decode_object(self, stream, marker, size, data):
         if size == 255:
             return self.decode_unsized_object(stream)
         else:
             return dict(self.decode_sized_object(stream, size))
 
-    def decode_object_ex(self, stream):
-        size = self.unpack_data('>I', stream.read(4))
+    def decode_object_ex(self, stream, marker, size, data):
         return dict(self.decode_sized_object(stream, size))
 
     def decode_sized_array(self, stream, size):
         for round in xrange(size):
-            marker, handler = self.skip_noop(stream)
-            if marker in 'E':
-                raise ValueError('Unexpected marker %r' % marker)
-            item = handler(stream)
-            if marker in 'ao' and isinstance(item, GeneratorType):
+            while True:
+                item = self.decode(stream)
+                if item is not NOOP:
+                    break
+            if item is EOS:
+                raise ValueError
+            if isinstance(item, GeneratorType):
                 item = list(item)
             yield item
 
     def decode_unsized_array(self, stream):
         while True:
-            marker, handler = self.next_marker(stream)
-            if marker == 'N':
-                if self.allow_noop:
-                    yield NOOP
-                continue
-            if not marker:
-                raise ValueError('Unexpected stream end')
-            item = handler(stream)
-            if marker in 'ao' and isinstance(item, GeneratorType):
-                item = list(item)
-            yield item
-
-    def decode_object_key(self, stream):
-        marker, handler = self.skip_noop(stream)
-        if not (marker or handler):
-            raise ValueError('Unexpected stream end')
-        if marker not in 'sS':
-            raise ValueError('Object key must be string typed, got %r' % marker)
-        return handler(stream)
+            item = self.decode(stream)
+            if item is EOS:
+                break
+            elif item is NOOP and self.allow_noop:
+                yield item
+            elif isinstance(item, GeneratorType):
+                yield list(item)
+            elif item is not NOOP:
+                yield item
 
     def decode_sized_object(self, stream, size):
         for round in xrange(size):
-            key = self.decode_object_key(stream)
-            marker, handler = self.skip_noop(stream)
-            try:
-                value = handler(stream)
-            except StopIteration:
-                raise ValueError('Unexpected end of stream event')
-            if marker in 'ao' and isinstance(value, GeneratorType):
+            while True:
+                key = self.decode(stream)
+                if key is not NOOP:
+                    break
+            if not isinstance(key, basestring):
+                raise ValueError('key should be string, not %r' % key)
+            while True:
+                value = self.decode(stream)
+                if value is not NOOP:
+                    break
+            if value is EOS:
+                raise ValueError
+            if isinstance(value, GeneratorType):
                 value = list(value)
             yield key, value
 
     def decode_unsized_object(self, stream):
         while True:
-            marker, handler = self.next_marker(stream)
-            if marker == 'N':
-                if self.allow_noop:
+            while True:
+                key = self.decode(stream)
+                if key is not NOOP:
+                    break
+                elif self.allow_noop:
                     yield NOOP, NOOP
-                continue
-            if not marker:
-                raise ValueError('Unexpected stream end')
-            if marker not in 'sSE':
-                raise ValueError('Object key must be string typed,'
-                                 ' got %r' % marker)
-            key = handler(stream)
-            marker, handler = self.skip_noop(stream)
-            try:
-                value = handler(stream)
-            except StopIteration:
-                raise ValueError('Value for key %r expected,'
-                                 ' but stream end reached'  % key)
-            if marker in 'ao' and isinstance(value, GeneratorType):
+            if key is EOS:
+                break
+            if not isinstance(key, basestring):
+                raise ValueError('key should be string, not %r' % key)
+            while True:
+                value = self.decode(stream)
+                if value is not NOOP:
+                    break
+            if value is EOS:
+                raise ValueError
+            if isinstance(value, GeneratorType):
                 value = list(value)
             yield key, value
