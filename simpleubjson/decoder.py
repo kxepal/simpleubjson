@@ -43,14 +43,20 @@ MARKERS = {
     }
 
 
-def streamify(source, _unpack=struct.unpack, _calc=struct.calcsize):
+def streamify(source, default=None, allow_noop=False,
+              _unpack=struct.unpack, _calc=struct.calcsize):
     while True:
         marker = source.read(1)
         if not marker:
             break
+        if not allow_noop and marker == 'N':
+            continue
         rule = MARKERS.get(marker)
         if rule is None:
-            raise ValueError('Unknown marker %r' % marker)
+            if default is None:
+                raise ValueError('Unknown marker %r' % marker)
+            else:
+                yield default(marker)
         size, value = rule
         if size is None and value is None:
             yield marker, None, None
@@ -124,7 +130,7 @@ class UBJSONDecoder(object):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    def __init__(self, default=None, handlers=None, allow_noop=False):
+    def __init__(self):
         self._handlers = {
             'N': self.decode_noop,
             'Z': self.decode_null,
@@ -146,19 +152,9 @@ class UBJSONDecoder(object):
             'O': self.decode_object_ex,
             'E': self.decode_eos,
         }
-        self.allow_noop = allow_noop
-        if default is not None:
-            self.decode_default = MethodType(default, self)
-        if handlers is not None:
-            for key, handler in handlers.items():
-                if handler is not None:
-                    handlers[key] = MethodType(handler, self)
-            self._handlers.update(handlers)
 
     def decode(self, stream):
         for marker, size, data in stream:
-            if marker == 'N':
-                continue
             handler = self.get_handler(marker)
             return handler(stream, marker, size, data)
         raise ValueError('Nothing to decode')
@@ -256,12 +252,9 @@ class UBJSONDecoder(object):
             item = self.decode(stream)
             if item is EOS:
                 break
-            elif item is NOOP and self.allow_noop:
-                yield item
             elif isinstance(item, GeneratorType):
-                yield list(item)
-            elif item is not NOOP:
-                yield item
+                item = list(item)
+            yield item
 
     def decode_sized_object(self, stream, size):
         for round in xrange(size):
@@ -287,8 +280,7 @@ class UBJSONDecoder(object):
                 key = self.decode(stream)
                 if key is not NOOP:
                     break
-                elif self.allow_noop:
-                    yield NOOP, NOOP
+                yield key, key
             if key is EOS:
                 break
             if not isinstance(key, basestring):

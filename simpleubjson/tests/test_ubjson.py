@@ -31,36 +31,11 @@ class DecoderTestCase(unittest.TestCase):
         self.assertRaises(ValueError, simpleubjson.decode, 'Я')
 
     def test_custom_default_handler(self):
-        def dummy(self, marker, stream):
+        def dummy(marker):
             assert marker == '%'
-            return 'foo'
+            return 's', 3, 'foo'
         data = simpleubjson.decode('%', default=dummy)
         self.assertEqual(data, 'foo')
-
-    def test_custom_handler(self):
-        def handle_datetime(self, stream, marker, size, value):
-            value = stream.read(20)
-            struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
-            return datetime.datetime(*struct_time)
-        data = simpleubjson.decode('t2009-02-13T23:31:30Z',
-                                   handlers={'t': handle_datetime})
-        self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
-
-    def test_override_builtin_handler(self):
-        def handle_str_or_datetime(self, stream, marker, size, value):
-            try:
-                struct_time = time.strptime(value, '%Y-%m-%dT%H:%M:%SZ')[:6]
-                return datetime.datetime(*struct_time)
-            except ValueError:
-                return value
-        data = simpleubjson.decode('s\x142009-02-13T23:31:30Z',
-                                   handlers={'s': handle_str_or_datetime})
-        self.assertEqual(data, datetime.datetime(2009, 2, 13, 23, 31, 30))
-
-    def test_unsupported_marker(self):
-        self.assertRaises(ValueError,
-                          simpleubjson.decode,
-                          'a\xffB\x00E', handlers={'a': None})
 
 
 class EncoderTestCase(unittest.TestCase):
@@ -374,11 +349,6 @@ class StreamTestCase(unittest.TestCase):
         data = simpleubjson.decode('a\xffNB\x01NNNB\x02NNNNNNNNNNNNNB\x03E')
         self.assertTrue(isinstance(data, GeneratorType))
         self.assertEqual(list(data), [1, 2, 3])
-
-    def test_decode_unsized_array_with_leading_noops(self):
-        data = simpleubjson.decode('Na\xffE')
-        self.assertTrue(isinstance(data, GeneratorType))
-        self.assertEqual(list(data), [])
 
     def test_decode_nested_unsized_values(self):
         data = simpleubjson.decode('a\xffa\xffB\x2aEo\xffs\x03fooB\x2aEE')
