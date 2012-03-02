@@ -8,9 +8,9 @@
 #
 
 #: Noop sentinel value
-NOOP = type('NoopType', (object,), {})()
+NOOP = type('NoopType', (object,), {'__slots__': ()})()
 #: EOS (end of stream) sentinel value
-EOS = type('EndOfStreamType', (object,), {})()
+EOS = type('EndOfStreamType', (object,), {'__slots__': ()})()
 
 from cStringIO import StringIO
 from simpleubjson.decoder import UBJSONDecoder
