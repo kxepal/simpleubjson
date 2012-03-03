@@ -14,6 +14,7 @@ EOS = type('EndOfStreamType', (object,), {'__slots__': ()})()
 
 from simpleubjson.decoder import UBJSONDecoder, streamify, MARKERS
 from simpleubjson.encoder import UBJSONEncoder
+from simpleubjson.tools.inspect import pprint
 
 _default_decoder = UBJSONDecoder()
 _default_encoder = UBJSONEncoder()
