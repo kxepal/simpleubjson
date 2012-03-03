@@ -8,11 +8,12 @@
 #
 
 import datetime
-import time
 import unittest
 import simpleubjson
 from StringIO import StringIO
 from types import GeneratorType
+from decimal import Decimal
+
 
 class DecoderTestCase(unittest.TestCase):
 
@@ -186,19 +187,19 @@ class HugeNumberTestCase(unittest.TestCase):
 
     def test_decode(self):
         source = 'h\x33314159265358979323846264338327950288419716939937510'
-        expected = '314159265358979323846264338327950288419716939937510'
+        expected = Decimal('314159265358979323846264338327950288419716939937510')
         data = simpleubjson.decode(source)
         self.assertEqual(data, expected)
 
     def test_decode_huge_float(self):
         source = 'h\x35-3.14159265358979323846264338327950288419716939937510'
-        expected = '-3.14159265358979323846264338327950288419716939937510'
+        expected = Decimal('-3.14159265358979323846264338327950288419716939937510')
         data = simpleubjson.decode(source)
         self.assertEqual(data, expected)
 
     def test_decode_exp_number(self):
         source = 'h\x052e+10'
-        expected = '2e+10'
+        expected = Decimal('2e+10')
         data = simpleubjson.decode(source)
         self.assertEqual(data, expected)
 
@@ -208,13 +209,19 @@ class HugeNumberTestCase(unittest.TestCase):
         data = simpleubjson.encode(source)
         self.assertEqual(data, expected)
 
+    def test_encode_decimal(self):
+        source = Decimal('3.14')
+        expected = 'h\x043.14'
+        data = simpleubjson.encode(source)
+        self.assertEqual(data, expected)
+
     def test_fail_on_invalid_numeric_value(self):
         source = 'h\x33314159 65358979323846264338327950288419716939937510'
-        self.assertRaises(ValueError, simpleubjson.decode, source)
+        self.assertRaises(ArithmeticError, simpleubjson.decode, source)
 
     def test_fail_on_non_numeric_value(self):
         source = 'h\x09foobarbaz'
-        self.assertRaises(ValueError, simpleubjson.decode, source)
+        self.assertRaises(ArithmeticError, simpleubjson.decode, source)
 
 
 class FloatTestCase(unittest.TestCase):

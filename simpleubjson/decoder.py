@@ -8,17 +8,11 @@
 #
 
 import struct
-import re
+from decimal import Decimal
 from types import GeneratorType
 from simpleubjson import NOOP, EOS
 
 __all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
-
-REX_NUMBER = re.compile('^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$')
-
-def is_number(s):
-    return s.isdigit() or REX_NUMBER.match(s) is not None
-
 
 MARKERS = {
     'N': (None, None),
@@ -96,9 +90,9 @@ class UBJSONDecoder(object):
     +--------+----------------------------+----------------------------+-------+
     | ``D``  | double                     | float                      |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``h``  | hugeint - 2 bytes          | str                        |       |
+    | ``h``  | hugeint - 2 bytes          | decimal.Decimal            |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``H``  | hugeint - 5 bytes          | str                        |       |
+    | ``H``  | hugeint - 5 bytes          | decimal.Decimal            |       |
     +--------+----------------------------+----------------------------+-------+
     | ``s``  | string - 2 bytes           | str                        |       |
     +--------+----------------------------+----------------------------+-------+
@@ -142,10 +136,8 @@ class UBJSONDecoder(object):
         elif marker in 'sShH':
             if marker in 'sS':
                 return value.decode('utf-8')
-            elif not is_number(value):
-                raise ValueError('Value of huge type should be numeric,'
-                                 ' not %r' % value)
-            return value
+            else:
+                return Decimal(value)
         elif marker == 'a':
             if size == 255:
                 return self.decode_unsized_array(stream)

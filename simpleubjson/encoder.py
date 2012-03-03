@@ -8,6 +8,7 @@
 #
 
 import struct
+from decimal import Decimal
 from types import GeneratorType, XRangeType, MethodType
 from simpleubjson import NOOP
 
@@ -47,7 +48,7 @@ class UBJSONEncoder(object):
     +----------------------------+----------------------------+-------+
     | float                      | double                     | \(1)  |
     +----------------------------+----------------------------+-------+
-    | long                       | hugeint                    | \(2)  |
+    | long                       | huge                       | \(2)  |
     +----------------------------+----------------------------+-------+
     | str                        | string                     | \(2)  |
     +----------------------------+----------------------------+-------+
@@ -63,6 +64,8 @@ class UBJSONEncoder(object):
     +----------------------------+----------------------------+-------+
     | xrange                     | unsized array              |       |
     +----------------------------+----------------------------+-------+
+    | decimal.Decimal            | huge                       | \(2)  |
+    +----------------------------+----------------------------+-------+
 
     Notes:
 
@@ -75,7 +78,7 @@ class UBJSONEncoder(object):
             * float: if 1.18e-38 <= abs(value) <= 3.4e38
             * double: if 2.23e-308 <= abs(value) < 1.80e308
 
-        Any other values would be encoded as hugeint data.
+        Any other values would be encoded as huge number.
 
     (2)
         Depending on value length it would be encoded to short data version
@@ -101,7 +104,8 @@ class UBJSONEncoder(object):
             dict_itemsiterator: self.encode_generator,
             XRangeType: self.encode_generator,
             GeneratorType: self.encode_generator,
-            dict: self.encode_dict
+            dict: self.encode_dict,
+            Decimal: self.encode_huge_number
         }
         if default is not None:
             self.encode_default = MethodType(default, self)
@@ -161,7 +165,7 @@ class UBJSONEncoder(object):
         elif is_int64(value):
             return ['L', self.pack_data('q', value)]
         else:
-            return self.encode_huge_value(value)
+            return self.encode_huge_number(value)
 
     def encode_float(self, value):
         if is_float(value):
@@ -171,7 +175,7 @@ class UBJSONEncoder(object):
         elif is_infinity(value):
             return ['Z']
         else:
-            return self.encode_huge_value(value)
+            return self.encode_huge_number(value)
 
     def encode_str(self, value):
         if isinstance(value, unicode):
@@ -219,7 +223,7 @@ class UBJSONEncoder(object):
             for chunk in self.iterencode(val):
                 yield chunk
 
-    def encode_huge_value(self, value):
+    def encode_huge_number(self, value):
         value = str(value)
         size = len(value)
         if size < 255:
