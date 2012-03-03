@@ -18,6 +18,7 @@ except ImportError:
 
 __all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
 
+#: Dict of valid UBJSON markers and struct format for their length and value.
 MARKERS = {
     'N': (None, None),
     'Z': (None, None),
@@ -38,11 +39,24 @@ MARKERS = {
     'A': ('>I', None),
     'o': ('>B', None),
     'O': ('>I', None),
-    }
-
+}
 
 def streamify(source, default=None, allow_noop=False,
               _unpack=struct.unpack, _calc=struct.calcsize):
+    """Wraps source data into stream that emits data in TLV-format.
+
+    :param source: `.read([size])`-able object or string with ubjson data.
+    :param default: Callable object that would be used if there is no handlers
+                    matched for occurred marker.
+                    Takes two arguments: data stream and marker.
+                    It should return tuple of three values: marker, size and
+                    result value.
+    :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
+                       unsized arrays and objects.
+    :type allow_noop: bool
+
+    :return: Generator of (type, length, value) data set.
+    """
     if isinstance(source, basestring):
         source = StringIO(source)
     assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
@@ -122,7 +136,7 @@ class UBJSONDecoder(object):
 
     (1)
         Noop values are ignored by default if only `allow_noop` argument wasn't
-        passed as ``True`` to :func:`simpleubjson.decoder.stremify` wrapper.
+        passed as ``True`` to :func:`~simpleubjson.decoder.streamify` wrapper.
 
     (2)
         Nested generators are automatically converted to lists.
@@ -133,11 +147,15 @@ class UBJSONDecoder(object):
     """
 
     def decode(self, stream):
+        """Decodes first value from :func:`~simpleubjson.decoder.streamify`-ed
+        ubjson data source."""
         for marker, size, value in stream:
             return self.decode_tlv(stream, marker, size, value)
         raise ValueError('nothing more to decode')
 
     def decode_tlv(self, stream, marker, size, value):
+        """Decodes single UBJSON value based on his marker, size and raw value.
+        """
         if marker in 'BiILdD':
             return value
         elif marker in 'sShH':

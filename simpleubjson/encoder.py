@@ -71,12 +71,13 @@ class UBJSONEncoder(object):
 
     (1)
         Depending on value it will be encoded to specified UBJSON type:
-            * byte: if -128 <= value <= 127
-            * int16: if -32768 <= value <= 32767
-            * int32: if -2147483648 <= value <= 2147483647
-            * int64: if -9223372036854775808 <= value 9223372036854775807
-            * float: if 1.18e-38 <= abs(value) <= 3.4e38
-            * double: if 2.23e-308 <= abs(value) < 1.80e308
+
+        * byte: if -128 <= value <= 127
+        * int16: if -32768 <= value <= 32767
+        * int32: if -2147483648 <= value <= 2147483647
+        * int64: if -9223372036854775808 <= value 9223372036854775807
+        * float: if 1.18e-38 <= abs(value) <= 3.4e38
+        * double: if 2.23e-308 <= abs(value) < 1.80e308
 
         Any other values would be encoded as huge number.
 
@@ -119,6 +120,14 @@ class UBJSONEncoder(object):
         return struct.pack('>' + pattern, data)
 
     def encode(self, value, output=None):
+        """Encodes Python object into UBJSON data.
+
+        :param value: Python object.
+                      See :class:`~simpleubjson.encoder.UBJSONEncoder` mapping
+                      table for supported object types.
+        :param output: `.write([data])`-able object. If omitted result would be
+                       returned as string.
+        """
         if output is None:
             return ''.join(self.iterencode(value))
         for chunk in self.iterencode(value):

@@ -9,6 +9,9 @@ Welcome to simpleubjson's documentation!
 .. automodule:: simpleubjson
   :members:
 
+.. automodule:: simpleubjson.tools.inspect
+  :members:
+
 .. automodule:: simpleubjson.decoder
   :members:
 

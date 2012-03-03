@@ -14,13 +14,13 @@ from simpleubjson.decoder import streamify, UBJSONDecoder
 def pprint(data, output=sys.stdout, allow_noop=True,
            indent='    ', max_level=None):
     """Pretty prints ubjson data using the handy [ ]-notation to represent it in
-    readable form. Example:
+    readable form. Example::
 
-    [o] [2]
-        [s] [2] [id]
-        [I] [1234567890]
-        [s] [4] [name]
-        [s] [3] [bob]
+        [o] [2]
+            [s] [2] [id]
+            [I] [1234567890]
+            [s] [4] [name]
+            [s] [3] [bob]
 
     :param data: `.read([size])`-able object or source string with ubjson data.
     :param output: `.write([data])`-able object.
