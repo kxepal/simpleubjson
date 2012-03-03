@@ -12,7 +12,6 @@ NOOP = type('NoopType', (object,), {'__slots__': ()})()
 #: EOS (end of stream) sentinel value
 EOS = type('EndOfStreamType', (object,), {'__slots__': ()})()
 
-from cStringIO import StringIO
 from simpleubjson.decoder import UBJSONDecoder, streamify, MARKERS
 from simpleubjson.encoder import UBJSONEncoder
 
@@ -42,8 +41,6 @@ def decode(data, default=None, allow_noop=False):
               arrays or objects.
             * Object key is not string type.
     """
-    if isinstance(data, basestring):
-        data = StringIO(data)
     stream = streamify(data, default, allow_noop)
     return _default_decoder.decode(stream)
 

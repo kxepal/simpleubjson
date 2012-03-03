@@ -11,6 +11,10 @@ import struct
 from decimal import Decimal
 from types import GeneratorType
 from simpleubjson import NOOP, EOS
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 __all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
 
@@ -39,6 +43,9 @@ MARKERS = {
 
 def streamify(source, default=None, allow_noop=False,
               _unpack=struct.unpack, _calc=struct.calcsize):
+    if isinstance(source, basestring):
+        source = StringIO(source)
+    assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
     while True:
         marker = source.read(1)
         if not marker:
