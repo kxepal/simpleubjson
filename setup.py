@@ -49,5 +49,14 @@ setup(
     test_suite = 'simpleubjson.tests',
     zip_safe = True,
 
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
+
     packages = find_packages(),
 )
