@@ -58,6 +58,10 @@ class UBJSONEncoder(object):
     +----------------------------+----------------------------+-------+
     | list                       | sized array                | \(2)  |
     +----------------------------+----------------------------+-------+
+    | set                        | sized array                | \(2)  |
+    +----------------------------+----------------------------+-------+
+    | frozenset                  | sized array                | \(2)  |
+    +----------------------------+----------------------------+-------+
     | generator                  | unsized array              |       |
     +----------------------------+----------------------------+-------+
     | dict                       | sized object               | \(2)  |
@@ -100,6 +104,8 @@ class UBJSONEncoder(object):
             basestring: self.encode_str,
             tuple: self.encode_array,
             list: self.encode_array,
+            set: self.encode_array,
+            frozenset: self.encode_array,
             dict_keysiterator: self.encode_generator,
             dict_valuesiterator: self.encode_generator,
             dict_itemsiterator: self.encode_generator,
