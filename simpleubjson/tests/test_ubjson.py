@@ -328,6 +328,14 @@ class ArrayTestCase(unittest.TestCase):
         data = simpleubjson.encode(list([1] * 1024))
         self.assertEqual(data, b('A\x00\x00\x04\x00') + b('B\x01') * 1024)
 
+    def test_encode_set(self):
+        data = simpleubjson.encode(set(['foo', 'bar', 'baz', 'foo']))
+        self.assertEqual(data, b('a\x03s\x03bazs\x03foos\x03bar'))
+
+    def test_encode_frozenset(self):
+        data = simpleubjson.encode(frozenset(['foo', 'bar', 'baz', 'foo']))
+        self.assertEqual(data, b('a\x03s\x03bazs\x03foos\x03bar'))
+
     def test_fail_decode_if_eos_marker_occurres_in_sized_array(self):
         data = b('a\x03B\x01B\x02EB\x03')
         self.assertRaises(ValueError, simpleubjson.decode, data)
