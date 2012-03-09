@@ -462,14 +462,5 @@ class ObjectTestCase(unittest.TestCase):
         self.assertRaises(ValueError, simpleubjson.decode, b('o\x01'))
 
 
-class UbjsonSamplesTestCase(unittest.TestCase):
-
-    def test_a_lot_of_nested_streams(self):
-        def gen_data():
-            return ''.join(['a', '\xff'] + ['a', '\xff', 'N', 'Z', 'N'] * 8192
-                                         + ['E'] * 8192 + ['E'])
-        list(simpleubjson.decode(gen_data()))
-
-
 if __name__ == '__main__':
     unittest.main()
