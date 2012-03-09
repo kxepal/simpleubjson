@@ -175,9 +175,10 @@ class UBJSONEncoder(object):
             return self.encode_noop
         tval = type(value)
         maybe_handler = None
+        handler = self._handlers.get(tval)
+        if handler is not None:
+            return handler
         for pytype, handler in self._handlers.items():
-            if tval is pytype:
-                return handler
             if isinstance(value, pytype):
                 maybe_handler = handler
         if maybe_handler is not None:
