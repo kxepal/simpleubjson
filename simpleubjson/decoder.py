@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (C) 2011-2012 Alexander Shorin
 # All rights reserved.
 #
