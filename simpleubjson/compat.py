@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2012 Alexander Shorin
+# All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.
+#
+
+import sys
+version = '.'.join(map(str, sys.version_info[:2]))
+
+if version >= '3.0':
+    from io import BytesIO
+    basestring = (str, bytes)
+    unicode = str
+    bytes = bytes
+    long = int
+    xrange = range
+    XRangeType = type(xrange(0))
+
+    d = {}
+    dict_keysiterator = type(d.keys())
+    dict_valuesiterator = type(d.values())
+    dict_itemsiterator = type(d.items())
+else:
+    from cStringIO import StringIO as BytesIO
+    basestring = basestring
+    unicode = unicode
+    b = bytes = str
+    long = long
+    xrange = xrange
+
+    d = {}
+    dict_keysiterator = type(d.iterkeys())
+    dict_valuesiterator = type(d.itervalues())
+    dict_itemsiterator = type(d.iteritems())
+
+b = lambda s: isinstance(s, unicode) and s.encode('latin1') or s
+u = lambda s: isinstance(s, bytes) and s.decode('utf-8') or s
+XRangeType = type(xrange(0))

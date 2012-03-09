@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Copyright (C) 2011-2012 Alexander Shorin
 # All rights reserved.
 #
@@ -11,10 +9,9 @@ import struct
 from decimal import Decimal
 from types import GeneratorType
 from simpleubjson import NOOP, EOS
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from simpleubjson.compat import BytesIO, bytes, unicode, xrange
+import sys
+version = '.'.join(map(str, sys.version_info[:2]))
 
 __all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
 
@@ -57,13 +54,17 @@ def streamify(source, default=None, allow_noop=False,
 
     :return: Generator of (type, length, value) data set.
     """
-    if isinstance(source, basestring):
-        source = StringIO(source)
+    if isinstance(source, unicode):
+        source = source.encode('utf-8')
+    if isinstance(source, bytes):
+        source = BytesIO(source)
     assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
     while True:
         marker = source.read(1)
         if not marker:
             break
+        if version >= '3.0':
+            marker = marker.decode('utf-8')
         if not allow_noop and marker == 'N':
             continue
         rule = MARKERS.get(marker)
@@ -162,7 +163,7 @@ class UBJSONDecoder(object):
             if marker in 'sS':
                 return value.decode('utf-8')
             else:
-                return Decimal(value)
+                return Decimal(value.decode('utf-8'))
         elif marker == 'a':
             if size == 255:
                 return self.decode_unsized_array(stream)
@@ -217,7 +218,7 @@ class UBJSONDecoder(object):
                 key = self.decode(stream)
                 if key is not NOOP:
                     break
-            if not isinstance(key, basestring):
+            if not isinstance(key, unicode):
                 raise ValueError('key should be string, not %r' % key)
             while True:
                 value = self.decode(stream)
@@ -238,7 +239,7 @@ class UBJSONDecoder(object):
                 yield key, key
             if key is EOS:
                 break
-            if not isinstance(key, basestring):
+            if not isinstance(key, unicode):
                 raise ValueError('key should be string, not %r' % key)
             while True:
                 value = self.decode(stream)

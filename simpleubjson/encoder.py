@@ -9,8 +9,11 @@
 
 import struct
 from decimal import Decimal
-from types import GeneratorType, XRangeType, MethodType
+from types import GeneratorType, MethodType
 from simpleubjson import NOOP
+from simpleubjson.compat import b, unicode, bytes, basestring, long, \
+                                XRangeType, dict_keysiterator, \
+                                dict_valuesiterator, dict_itemsiterator
 
 __all__ = ['UBJSONEncoder']
 
@@ -96,11 +99,6 @@ class UBJSONEncoder(object):
         to long one.
     """
     def __init__(self, default=None, handlers=None):
-        d = {}
-        dict_keysiterator = type(d.iterkeys())
-        dict_valuesiterator = type(d.itervalues())
-        dict_itemsiterator = type(d.iteritems())
-
         self._handlers = {
             type(None): self.encode_none,
             bool: self.encode_bool,
@@ -129,7 +127,7 @@ class UBJSONEncoder(object):
             self._handlers.update(handlers)
 
     def pack_data(self, pattern, data):
-        return struct.pack('>' + pattern, data)
+        return struct.pack(pattern, data)
 
     def encode(self, value, output=None):
         """Encodes Python object into UBJSON data.
@@ -141,7 +139,7 @@ class UBJSONEncoder(object):
                        returned as string.
         """
         if output is None:
-            return ''.join(self.iterencode(value))
+            return bytes().join(self.iterencode(value))
         for chunk in self.iterencode(value):
             output.write(chunk)
 
@@ -168,33 +166,33 @@ class UBJSONEncoder(object):
         raise TypeError('Unable to encode %r to ubjson' % value)
 
     def encode_noop(self, value):
-        yield 'N'
+        yield b('N')
 
     def encode_none(self, value):
-        yield 'Z'
+        yield b('Z')
 
     def encode_bool(self, value):
-        yield ['F', 'T'][value]
+        yield b(['F', 'T'][value])
 
     def encode_number(self, value):
         if is_byte(value):
-            return ['B', self.pack_data('b', value)]
+            return [b('B'), self.pack_data('>b', value)]
         elif is_int16(value):
-            return ['i', self.pack_data('h', value)]
+            return [b('i'), self.pack_data('>h', value)]
         elif is_int32(value):
-            return ['I', self.pack_data('i', value)]
+            return [b('I'), self.pack_data('>i', value)]
         elif is_int64(value):
-            return ['L', self.pack_data('q', value)]
+            return [b('L'), self.pack_data('>q', value)]
         else:
             return self.encode_huge_number(value)
 
     def encode_float(self, value):
         if is_float(value):
-            return ['d', self.pack_data('f', value)]
+            return [b('d'), self.pack_data('>f', value)]
         elif is_double(value):
-            return ['D', self.pack_data('d', value)]
+            return [b('D'), self.pack_data('>d', value)]
         elif is_infinity(value):
-            return ['Z']
+            return [b('Z')]
         else:
             return self.encode_huge_number(value)
 
@@ -203,40 +201,40 @@ class UBJSONEncoder(object):
             value = value.encode('utf-8')
         length = len(value)
         if length < 255:
-            return ['s', self.pack_data('B', length),
-                         self.pack_data('%ds' % length, value)]
+            return [b('s'), self.pack_data('>B', length),
+                         self.pack_data('>%ds' % length, value)]
         else:
-            return ['S', self.pack_data('I', length),
-                         self.pack_data('%ds' % length, value)]
+            return [b('S'), self.pack_data('>I', length),
+                         self.pack_data('>%ds' % length, value)]
 
     def encode_array(self, value):
         size = len(value)
         if size < 255:
-            yield 'a'
-            yield self.pack_data('B', size)
+            yield b('a')
+            yield self.pack_data('>B', size)
         else:
-            yield 'A'
-            yield self.pack_data('I', size)
+            yield b('A')
+            yield self.pack_data('>I', size)
         for item in value:
             for chunk in self.iterencode(item):
                 yield chunk
 
     def encode_generator(self, value):
-        yield 'a'
-        yield '\xff'
+        yield b('a')
+        yield b('\xff')
         for item in value:
             for chunk in self.iterencode(item):
                 yield chunk
-        yield 'E'
+        yield b('E')
 
     def encode_dict(self, value):
         size = len(value)
         if size < 255:
-            yield 'o'
-            yield self.pack_data('B', size)
+            yield b('o')
+            yield self.pack_data('>B', size)
         else:
-            yield 'O'
-            yield self.pack_data('I', size)
+            yield b('O')
+            yield self.pack_data('>I', size)
         for key, val in value.items():
             assert isinstance(key, basestring), 'object key should be a string'
             for chunk in self.iterencode(key):
@@ -245,20 +243,20 @@ class UBJSONEncoder(object):
                 yield chunk
 
     def encode_iterated_dict(self, value):
-        yield 'o'
-        yield '\xff'
+        yield b('o')
+        yield b('\xff')
         for key, value in value:
             assert isinstance(key, basestring), 'object key should be a string'
             for chunk in self.iterencode((key, value)):
                 yield chunk
-        yield 'E'
+        yield b('E')
 
     def encode_huge_number(self, value):
-        value = str(value)
+        value = unicode(value).encode('utf-8')
         size = len(value)
         if size < 255:
-            return ['h', self.pack_data('B', size),
-                         self.pack_data('%ds' % size, value)]
+            return [b('h'), self.pack_data('>B', size),
+                         self.pack_data('>%ds' % size, value)]
         else:
-            return ['H', self.pack_data('I', size),
-                         self.pack_data('%ds' % size, value)]
+            return [b('H'), self.pack_data('>I', size),
+                         self.pack_data('>%ds' % size, value)]
