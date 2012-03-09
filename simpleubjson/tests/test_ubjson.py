@@ -384,6 +384,21 @@ class StreamTestCase(unittest.TestCase):
         data = simpleubjson.encode(xrange(4))
         self.assertEqual(data, 'a\xffB\x00B\x01B\x02B\x03E')
 
+    def test_encode_dict_iterkeys(self):
+        data = {'foo': 0, 'bar': 1, 'baz': 2}
+        data = simpleubjson.encode(data.iterkeys())
+        self.assertEqual(data, 'a\xffs\x03bazs\x03foos\x03barE')
+
+    def test_encode_dict_itervalues(self):
+        data = {'foo': 0, 'bar': 1, 'baz': 2}
+        data = simpleubjson.encode(data.itervalues())
+        self.assertEqual(data, 'a\xffB\x02B\x00B\x01E')
+
+    def test_encode_dict_iteritems(self):
+        data = {'foo': 0, 'bar': 1, 'baz': 2}
+        data = simpleubjson.encode(data.iteritems())
+        self.assertEqual(data, 'o\xffa\x02s\x03bazB\x02a\x02s\x03fooB\x00a\x02s\x03barB\x01E')
+
     def test_fail_decode_on_early_array_end(self):
         self.assertRaises(ValueError, list, simpleubjson.decode('a\xff'))
 

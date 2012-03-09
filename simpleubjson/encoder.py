@@ -66,6 +66,12 @@ class UBJSONEncoder(object):
     +----------------------------+----------------------------+-------+
     | dict                       | sized object               | \(2)  |
     +----------------------------+----------------------------+-------+
+    | dict.iterkeys()            | unsized array              |       |
+    +----------------------------+----------------------------+-------+
+    | dict.itervalues()          | unsized array              |       |
+    +----------------------------+----------------------------+-------+
+    | dict.iteritems()           | unsized object             |       |
+    +----------------------------+----------------------------+-------+
     | xrange                     | unsized array              |       |
     +----------------------------+----------------------------+-------+
     | decimal.Decimal            | huge                       | \(2)  |
@@ -91,8 +97,8 @@ class UBJSONEncoder(object):
     """
     def __init__(self, default=None, handlers=None):
         d = {}
-        dict_keysiterator = type(d.iteritems())
-        dict_valuesiterator = type(d.iteritems())
+        dict_keysiterator = type(d.iterkeys())
+        dict_valuesiterator = type(d.itervalues())
         dict_itemsiterator = type(d.iteritems())
 
         self._handlers = {
@@ -108,7 +114,7 @@ class UBJSONEncoder(object):
             frozenset: self.encode_array,
             dict_keysiterator: self.encode_generator,
             dict_valuesiterator: self.encode_generator,
-            dict_itemsiterator: self.encode_generator,
+            dict_itemsiterator: self.encode_iterated_dict,
             XRangeType: self.encode_generator,
             GeneratorType: self.encode_generator,
             dict: self.encode_dict,
@@ -232,11 +238,20 @@ class UBJSONEncoder(object):
             yield 'O'
             yield self.pack_data('I', size)
         for key, val in value.items():
-            assert isinstance(key, basestring)
+            assert isinstance(key, basestring), 'object key should be a string'
             for chunk in self.iterencode(key):
                 yield chunk
             for chunk in self.iterencode(val):
                 yield chunk
+
+    def encode_iterated_dict(self, value):
+        yield 'o'
+        yield '\xff'
+        for key, value in value:
+            assert isinstance(key, basestring), 'object key should be a string'
+            for chunk in self.iterencode((key, value)):
+                yield chunk
+        yield 'E'
 
     def encode_huge_number(self, value):
         value = str(value)
