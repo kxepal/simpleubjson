@@ -25,6 +25,28 @@ is_float = lambda value: 1.18e-38 <= abs(value) <= 3.4e38
 is_double = lambda value: 2.23e-308 <= abs(value) < 1.8e308 # 1.8e308 is inf
 is_infinity = lambda value: value == float('inf') or value == float('-inf')
 
+MARKER_Z = b('Z')
+MARKER_N = b('N')
+MARKER_F = b('F')
+MARKER_T = b('T')
+MARKER_B = b('B')
+MARKER_i = b('i')
+MARKER_I = b('I')
+MARKER_L = b('L')
+MARKER_d = b('d')
+MARKER_D = b('D')
+MARKER_s = b('s')
+MARKER_S = b('S')
+MARKER_h = b('h')
+MARKER_H = b('H')
+MARKER_a = b('a')
+MARKER_A = b('A')
+MARKER_o = b('o')
+MARKER_O = b('O')
+MARKER_E = b('E')
+MARKER_FF = b('\xff')
+
+
 class UBJSONEncoder(object):
     """Base encoder of Python objects to UBJSON data that follows next rules:
 
@@ -166,33 +188,33 @@ class UBJSONEncoder(object):
         raise TypeError('Unable to encode %r to ubjson' % value)
 
     def encode_noop(self, value):
-        yield b('N')
+        yield MARKER_N
 
     def encode_none(self, value):
-        yield b('Z')
+        yield MARKER_Z
 
     def encode_bool(self, value):
-        yield b(['F', 'T'][value])
+        yield [MARKER_F, MARKER_T][value]
 
     def encode_number(self, value):
         if is_byte(value):
-            return [b('B'), self.pack_data('>b', value)]
+            return [MARKER_B, struct.pack('>b', value)]
         elif is_int16(value):
-            return [b('i'), self.pack_data('>h', value)]
+            return [MARKER_i, struct.pack('>h', value)]
         elif is_int32(value):
-            return [b('I'), self.pack_data('>i', value)]
+            return [MARKER_I, struct.pack('>i', value)]
         elif is_int64(value):
-            return [b('L'), self.pack_data('>q', value)]
+            return [MARKER_L, struct.pack('>q', value)]
         else:
             return self.encode_huge_number(value)
 
     def encode_float(self, value):
         if is_float(value):
-            return [b('d'), self.pack_data('>f', value)]
+            return [MARKER_d, struct.pack('>f', value)]
         elif is_double(value):
-            return [b('D'), self.pack_data('>d', value)]
+            return [MARKER_D, struct.pack('>d', value)]
         elif is_infinity(value):
-            return [b('Z')]
+            return [MARKER_Z]
         else:
             return self.encode_huge_number(value)
 
@@ -201,40 +223,40 @@ class UBJSONEncoder(object):
             value = value.encode('utf-8')
         length = len(value)
         if length < 255:
-            return [b('s'), self.pack_data('>B', length),
-                         self.pack_data('>%ds' % length, value)]
+            return [MARKER_s, struct.pack('>B', length),
+                              struct.pack('>%ds' % length, value)]
         else:
-            return [b('S'), self.pack_data('>I', length),
-                         self.pack_data('>%ds' % length, value)]
+            return [MARKER_S, struct.pack('>I', length),
+                         struct.pack('>%ds' % length, value)]
 
     def encode_array(self, value):
         size = len(value)
         if size < 255:
-            yield b('a')
-            yield self.pack_data('>B', size)
+            yield MARKER_a
+            yield struct.pack('>B', size)
         else:
-            yield b('A')
-            yield self.pack_data('>I', size)
+            yield MARKER_A
+            yield struct.pack('>I', size)
         for item in value:
             for chunk in self.iterencode(item):
                 yield chunk
 
     def encode_generator(self, value):
-        yield b('a')
-        yield b('\xff')
+        yield MARKER_a
+        yield MARKER_FF
         for item in value:
             for chunk in self.iterencode(item):
                 yield chunk
-        yield b('E')
+        yield MARKER_E
 
     def encode_dict(self, value):
         size = len(value)
         if size < 255:
-            yield b('o')
-            yield self.pack_data('>B', size)
+            yield MARKER_o
+            yield struct.pack('>B', size)
         else:
-            yield b('O')
-            yield self.pack_data('>I', size)
+            yield MARKER_O
+            yield struct.pack('>I', size)
         for key, val in value.items():
             assert isinstance(key, basestring), 'object key should be a string'
             for chunk in self.iterencode(key):
@@ -243,20 +265,20 @@ class UBJSONEncoder(object):
                 yield chunk
 
     def encode_iterated_dict(self, value):
-        yield b('o')
-        yield b('\xff')
+        yield MARKER_o
+        yield MARKER_FF
         for key, value in value:
             assert isinstance(key, basestring), 'object key should be a string'
             for chunk in self.iterencode((key, value)):
                 yield chunk
-        yield b('E')
+        yield MARKER_E
 
     def encode_huge_number(self, value):
         value = unicode(value).encode('utf-8')
         size = len(value)
         if size < 255:
-            return [b('h'), self.pack_data('>B', size),
-                         self.pack_data('>%ds' % size, value)]
+            return [MARKER_h, struct.pack('>B', size),
+                              struct.pack('>%ds' % size, value)]
         else:
-            return [b('H'), self.pack_data('>I', size),
-                         self.pack_data('>%ds' % size, value)]
+            return [MARKER_H, struct.pack('>I', size),
+                              struct.pack('>%ds' % size, value)]
