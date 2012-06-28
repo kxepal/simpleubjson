@@ -42,7 +42,7 @@ def decode(data, default=None, allow_noop=False):
               arrays or objects.
             * Object key is not string type.
     """
-    stream = streamify(data, default, allow_noop)
+    stream = streamify(data, MARKERS, default, allow_noop)
     return _default_decoder.decode(stream)
 
 def encode(data, output=None, default=None, handlers=None):

@@ -40,10 +40,12 @@ MARKERS = {
     'O': ('>I', None),
 }
 
-def streamify(source, default=None, allow_noop=False):
+def streamify(source, markers, default=None, allow_noop=False):
     """Wraps source data into stream that emits data in TLV-format.
 
     :param source: `.read([size])`-able object or string with ubjson data.
+    :param markers: Key-value set of rules for :func:`struck.unpack` function.
+    :type markers: dict
     :param default: Callable object that would be used if there is no handlers
                     matched for occurred marker.
                     Takes two arguments: data stream and marker.
@@ -71,13 +73,13 @@ def streamify(source, default=None, allow_noop=False):
             marker = marker.decode('utf-8')
         if not allow_noop and marker == 'N':
             continue
-        if marker not in MARKERS:
+        if marker not in markers:
             if default is None:
                 raise ValueError('Unknown marker %r' % marker)
             else:
                 yield default(marker)
                 continue
-        size, value = MARKERS[marker]
+        size, value = markers[marker]
         if size is not None:
             size = _unpack(size, read(_calc(size)))[0]
         if value is not None:
