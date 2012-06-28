@@ -40,8 +40,7 @@ MARKERS = {
     'O': ('>I', None),
 }
 
-def streamify(source, default=None, allow_noop=False,
-              _unpack=struct.unpack, _calc=struct.calcsize):
+def streamify(source, default=None, allow_noop=False):
     """Wraps source data into stream that emits data in TLV-format.
 
     :param source: `.read([size])`-able object or string with ubjson data.
@@ -61,31 +60,31 @@ def streamify(source, default=None, allow_noop=False,
     if isinstance(source, bytes):
         source = BytesIO(source)
     assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
+    read = source.read
+    _unpack = struct.unpack
+    _calc = struct.calcsize
     while True:
-        marker = source.read(1)
+        marker = read(1)
         if not marker:
             break
         if version >= '3.0':
             marker = marker.decode('utf-8')
         if not allow_noop and marker == 'N':
             continue
-        rule = MARKERS.get(marker)
-        if rule is None:
+        if marker not in MARKERS:
             if default is None:
                 raise ValueError('Unknown marker %r' % marker)
             else:
                 yield default(marker)
-        size, value = rule
-        if size is None and value is None:
-            yield marker, None, None
-        elif size is None and value is not None:
-            yield marker, None, _unpack(value, source.read(_calc(value)))[0]
-        elif size is not None and value is not None:
-            length = _unpack(size, source.read(_calc(size)))[0]
-            value = value % length
-            yield marker, length, _unpack(value, source.read(_calc(value)))[0]
-        elif size is not None and value is None:
-            yield marker, _unpack(size, source.read(_calc(size)))[0], None
+                continue
+        size, value = MARKERS[marker]
+        if size is not None:
+            size = _unpack(size, read(_calc(size)))[0]
+        if value is not None:
+            if size is not None:
+                value = value % size
+            value = _unpack(value, read(_calc(value)))[0]
+        yield marker, size, value
 
 
 class UBJSONDecoder(object):
