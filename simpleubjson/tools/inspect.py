@@ -12,7 +12,7 @@ from simpleubjson.decoder import streamify, MARKERS_DRAFT_8, decode_tlv_draft_8
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,
-           indent='    ', max_level=None):
+           indent='    ', max_level=None, spec='draft-8'):
     """Pretty prints ubjson data using the handy [ ]-notation to represent it in
     readable form. Example::
 
@@ -28,6 +28,8 @@ def pprint(data, output=sys.stdout, allow_noop=True,
     :param indent: Indention string.
     :param max_level: Max level of inspection nested containers. By default
                       there is no limit, but you may hit system recursion limit.
+    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :type spec: str
     """
     def maybe_write(data, level):
         if max_level is None or level <= max_level:
@@ -48,15 +50,19 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 else:
                     inspect(stream, level + 1, length)
             elif length is None and value is not None:
-                value = decode_tlv_draft_8(None, type, length, value)
+                value = decode_tlv(None, type, length, value)
                 maybe_write('[%s] [%s]\n' % (type, value), level)
             else:
-                value = decode_tlv_draft_8(None, type, length, value)
+                value = decode_tlv(None, type, length, value)
                 maybe_write('[%s] [%s] [%s]\n' % (type, length, value), level)
             if size != 255:
                 size -= 1
                 if not size:
                     return
-    stream = streamify(data, MARKERS_DRAFT_8, allow_noop)
+    if spec.lower() in ['draft8', 'draft-8']:
+        stream = streamify(data, MARKERS_DRAFT_8, allow_noop)
+        decode_tlv = decode_tlv_draft_8
+    else:
+        raise ValueError('Unknown or unsupported specification %s' % spec)
     inspect(stream, 0, 255)
     output.flush()

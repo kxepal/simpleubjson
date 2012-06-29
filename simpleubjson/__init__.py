@@ -17,7 +17,7 @@ from simpleubjson.encoder import encode_draft_8
 from simpleubjson.tools.inspect import pprint
 
 
-def decode(data, default=None, allow_noop=False):
+def decode(data, default=None, allow_noop=False, spec='draft8'):
     """Decodes input stream of UBJSON data to Python object.
 
     :param data: `.read([size])`-able object or source string.
@@ -28,6 +28,8 @@ def decode(data, default=None, allow_noop=False):
                     result value.
     :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
+    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :type spec: str
     :type allow_noop: bool
 
     :return: Decoded Python object. See mapping table below.
@@ -40,10 +42,13 @@ def decode(data, default=None, allow_noop=False):
               arrays or objects.
             * Object key is not string type.
     """
-    stream = streamify(data, MARKERS_DRAFT_8, default, allow_noop)
-    return decode_draft_8(stream)
+    if spec.lower() in ['draft8', 'draft-8']:
+        stream = streamify(data, MARKERS_DRAFT_8, default, allow_noop)
+        return decode_draft_8(stream)
+    else:
+        raise ValueError('Unknown or unsupported specification %s' % spec)
 
-def encode(data, output=None, default=None):
+def encode(data, output=None, default=None, spec='draft-8'):
     """Encodes Python object to Universal Binary JSON data.
 
     :param data: Python object.
@@ -53,6 +58,8 @@ def encode(data, output=None, default=None):
                     matched for Python data type.
                     Takes encodable value as single argument and must return
                     valid UBJSON encodable value.
+    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :type spec: str
 
     :return: Encoded Python object. See mapping table below.
              If `output` param is specified, all data would be written into it
@@ -62,5 +69,7 @@ def encode(data, output=None, default=None):
         * TypeError if no handlers specified for passed value type.
         * ValueError if unable to pack Python value to binary form.
     """
-    return encode_draft_8(data, output, default)
-
+    if spec.lower() in ['draft8', 'draft-8']:
+        return encode_draft_8(data, output, default)
+    else:
+        raise ValueError('Unknown or unsupported specification %s' % spec)
