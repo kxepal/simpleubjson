@@ -41,6 +41,31 @@ MARKERS_DRAFT_8 = {
     'O': ('>I', None),
 }
 
+_NUMERIC_MARKERS = {
+    'B': (None, '>b'),
+    'i': (None, '>h'),
+    'I': (None, '>i'),
+    'L': (None, '>q'),
+}
+MARKERS_DRAFT_9 = {
+    'N': (None, None),
+    'Z': (None, None),
+    'E': (None, None),
+    'F': (None, None),
+    'T': (None, None),
+    'B': (None, '>b'),
+    'i': (None, '>h'),
+    'I': (None, '>i'),
+    'L': (None, '>q'),
+    'd': (None, '>f'),
+    'D': (None, '>d'),
+    'S': (_NUMERIC_MARKERS, '>%ds'),
+    'H': (_NUMERIC_MARKERS, '>%ds'),
+    'A': (None, None),
+    'O': (None, None),
+}
+del _NUMERIC_MARKERS
+
 def streamify(source, markers, default=None, allow_noop=False):
     """Wraps source data into stream that emits data in TLV-format.
 
@@ -82,7 +107,17 @@ def streamify(source, markers, default=None, allow_noop=False):
                 continue
         size, value = markers[marker]
         if size is not None:
+            if isinstance(size, dict):
+                smarker = read(1)
+                if not smarker:
+                    break
+                if version >= '3.0':
+                    smarker = smarker.decode('utf-8')
+                if not smarker in size:
+                    raise ValueError('Invalid size marker %s' % smarker)
+                size = size[smarker][1]
             size = _unpack(size, read(_calc(size)))[0]
+            assert size >= 0, 'Negative size for marker %s' % marker
         if value is not None:
             if size is not None:
                 value = value % size
@@ -154,6 +189,58 @@ def decode_draft_8(stream):
         return decode_tlv_draft_8(stream, marker, size, value)
     raise ValueError('nothing more to decode')
 
+def decode_draft_9(stream):
+    """Base decoder of UBJSON data to Python object that follows next rules:
+
+    +--------+----------------------------+----------------------------+-------+
+    | Marker | UBJSON type                | Python type                | Notes |
+    +========+============================+============================+=======+
+    | ``N``  | noop                       | :const:`~simpleubjson.NOOP`| \(1)  |
+    +--------+----------------------------+----------------------------+-------+
+    | ``Z``  | null                       | None                       |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``F``  | false                      | bool                       |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``T``  | true                       | bool                       |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``B``  | byte                       | int                        |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``i``  | int16                      | int                        |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``I``  | int32                      | int                        |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``L``  | int64                      | long                       |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``d``  | float                      | float                      |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``D``  | double                     | float                      |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``H``  | hugeint - sized            | decimal.Decimal            |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``S``  | string - sized             | str                        |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``A``  | array - unsized            | generator                  | \(2)  |
+    +--------+----------------------------+----------------------------+-------+
+    | ``O``  | object - unsized           | generator                  | \(3)  |
+    +--------+----------------------------+----------------------------+-------+
+
+    Notes:
+
+    (1)
+        Noop values are ignored by default if only `allow_noop` argument wasn't
+        passed as ``True`` to :func:`~simpleubjson.decoder.streamify` wrapper.
+
+    (2)
+        Nested generators are automatically converted to lists.
+
+    (3)
+        Unsized objects are represented as list of 2-element tuples with object
+        key and value.
+    """
+    for marker, size, value in stream:
+        return decode_tlv_draft_9(stream, marker, size, value)
+    raise ValueError('nothing more to decode')
+
 def decode_tlv_draft_8(stream, marker, size, value):
     if marker in 'BiILdD':
         return value
@@ -170,6 +257,31 @@ def decode_tlv_draft_8(stream, marker, size, value):
         if size == 255:
             return decode_unsized_object(decode_draft_8, stream)
         return dict(decode_sized_object(decode_draft_8, stream, size))
+    elif marker in 'F':
+        return False
+    elif marker == 'T':
+        return True
+    elif marker == 'Z':
+        return None
+    elif marker == 'N':
+        return NOOP
+    elif marker == 'E':
+        return EOS
+    else:
+        raise ValueError('Unknown marker %r' % marker)
+
+def decode_tlv_draft_9(stream, marker, size, value):
+    if marker in 'BiILdD':
+        return value
+    elif marker in 'SH':
+        value = value.decode('utf-8')
+        if marker == 'H':
+            return Decimal(value)
+        return value
+    elif marker in 'A':
+        return decode_unsized_array(decode_draft_9, stream)
+    elif marker in 'O':
+        return decode_unsized_object(decode_draft_9, stream)
     elif marker in 'F':
         return False
     elif marker == 'T':

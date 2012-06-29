@@ -70,14 +70,7 @@ def encode_draft_8(value, output=None, default=None):
             elif is_int64(value):
                 return MARKER_L, _pack('>q', value)
             else:
-                value = unicode(value).encode('utf-8')
-                size = len(value)
-                if size < 255:
-                    return (MARKER_h, struct.pack('>B', size),
-                            struct.pack('>%ds' % size, value))
-                else:
-                    return (MARKER_H, struct.pack('>I', size),
-                            struct.pack('>%ds' % size, value))
+                return encode_huge_number(encode, value)
         elif maybe_one_of(tval, float):
             if is_float(value):
                 return MARKER_d, struct.pack('>f', value)
@@ -86,14 +79,7 @@ def encode_draft_8(value, output=None, default=None):
             elif is_infinity(value):
                 return MARKER_Z,
             else:
-                value = unicode(value).encode('utf-8')
-                size = len(value)
-                if size < 255:
-                    return (MARKER_h, struct.pack('>B', size),
-                            struct.pack('>%ds' % size, value))
-                else:
-                    return (MARKER_H, struct.pack('>I', size),
-                            struct.pack('>%ds' % size, value))
+                return encode_huge_number(encode, value)
         elif maybe_one_of(tval, bytes, unicode):
             if isinstance(value, unicode):
                 value = value.encode('utf-8')
@@ -163,3 +149,88 @@ def encode_huge_number(encode, value):
     else:
         return [MARKER_H, struct.pack('>I', size),
                 struct.pack('>%ds' % size, value)]
+
+
+def encode_draft_9(value, output=None, default=None):
+    _pack = struct.pack
+    def maybe_one_of(tval, *types):
+        if tval in types:
+            return True
+        for item in types:
+            if isinstance(tval, item):
+                return True
+        return False
+    def encode(value, default=None):
+        tval = type(value)
+        if value is None:
+            return MARKER_Z,
+        elif maybe_one_of (tval, int, long):
+            if is_byte(value):
+                return MARKER_B, _pack('>b', value)
+            elif is_int16(value):
+                return MARKER_i, _pack('>h', value)
+            elif is_int32(value):
+                return MARKER_I, _pack('>i', value)
+            elif is_int64(value):
+                return MARKER_L, _pack('>q', value)
+            else:
+                value = unicode(value).encode('utf-8')
+                size = len(value)
+                data = struct.pack('>%ds' % size, value)
+                return chain((MARKER_H,), encode(size), [data])
+        elif maybe_one_of(tval, float):
+            if is_float(value):
+                return MARKER_d, struct.pack('>f', value)
+            elif is_double(value):
+                return MARKER_D, struct.pack('>d', value)
+            elif is_infinity(value):
+                return MARKER_Z,
+            else:
+                value = unicode(value).encode('utf-8')
+                size = len(value)
+                data = struct.pack('>%ds' % size, value)
+                return chain((MARKER_H,), encode(size), [data])
+        elif maybe_one_of(tval, bytes, unicode):
+            if isinstance(value, unicode):
+                value = value.encode('utf-8')
+            size = len(value)
+            data = struct.pack('>%ds' % size, value)
+            return chain((MARKER_S,), encode(size), [data])
+        elif maybe_one_of(tval, tuple, list, set, frozenset,
+                          GeneratorType, XRangeType,
+                          dict_keysiterator, dict_valuesiterator):
+            header = (MARKER_A,)
+            body = (chunk for item in value for chunk in encode(item))
+            tail = (MARKER_E,)
+            return chain(header, body, tail)
+        elif maybe_one_of(tval, dict, dict_itemsiterator):
+            header = (MARKER_O,)
+            body = tuple()
+            if isinstance(value, dict):
+                items = value.items()
+            else:
+                items = value
+            for key, val in items:
+                assert isinstance(key, basestring), 'object key should be a string'
+                body = chain(body, encode(key), encode(val))
+            tail = (MARKER_E,)
+            return chain(header, body, tail)
+        elif maybe_one_of(tval, Decimal):
+            value = unicode(value).encode('utf-8')
+            size = len(value)
+            data = struct.pack('>%ds' % size, value)
+            return chain((MARKER_H,), encode(size), [data])
+        elif maybe_one_of (tval, bool):
+            return [MARKER_F, MARKER_T][value],
+        elif value is NOOP:
+            return MARKER_N,
+        elif value is EOS:
+            return MARKER_E,
+        elif default is not None:
+            return encode(default(value))
+        else:
+            raise TypeError('Unable to encode value %r (%r)' % (value, tval))
+    if output is None:
+        return bytes().join(encode(value, default))
+    for chunk in encode(value, default):
+        output.write(chunk)

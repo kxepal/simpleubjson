@@ -8,7 +8,7 @@
 #
 
 import sys
-from simpleubjson.decoder import streamify, MARKERS_DRAFT_8, decode_tlv_draft_8
+import simpleubjson.decoder as decoder
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,
@@ -28,7 +28,8 @@ def pprint(data, output=sys.stdout, allow_noop=True,
     :param indent: Indention string.
     :param max_level: Max level of inspection nested containers. By default
                       there is no limit, but you may hit system recursion limit.
-    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :param spec: UBJSON specification. Supported Draft-8 and Draft-9
+                 specifications by ``draft-8`` or ``draft-9`` keys.
     :type spec: str
     """
     def maybe_write(data, level):
@@ -38,10 +39,20 @@ def pprint(data, output=sys.stdout, allow_noop=True,
     def inspect(stream, level, size):
         for type, length, value in stream:
             if length is None and value is None:
-                if type == 'E' and size == 255:
-                    level -= 1
-                maybe_write('[%s]\n' % (type,), level)
-                return
+                if spec == 'draft8':
+                    if type == 'E' and size == 255:
+                        level -= 1
+                    maybe_write('[%s]\n' % (type,), level)
+                    return
+                elif spec == 'draft9':
+                    if type in 'AO':
+                        maybe_write('[%s]\n' % (type,), level)
+                        return inspect(stream, level + 1, 255)
+                    elif type == 'E':
+                        level -= 1
+                        maybe_write('[%s]\n' % (type,), level)
+                    else:
+                        maybe_write('[%s]\n' % (type,), level)
             elif length is not None and value is None:
                 maybe_write('[%s] [%s]\n' % (type, length), level)
                 if type in 'oO':
@@ -60,8 +71,13 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 if not size:
                     return
     if spec.lower() in ['draft8', 'draft-8']:
-        stream = streamify(data, MARKERS_DRAFT_8, allow_noop)
-        decode_tlv = decode_tlv_draft_8
+        spec = 'draft8'
+        stream = decoder.streamify(data, decoder.MARKERS_DRAFT_8, allow_noop=allow_noop)
+        decode_tlv = decoder.decode_tlv_draft_8
+    elif spec.lower() in ['draft9', 'draft-9']:
+        spec = 'draft9'
+        stream = decoder.streamify(data, decoder.MARKERS_DRAFT_9, allow_noop=allow_noop)
+        decode_tlv = decoder.decode_tlv_draft_9
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
     inspect(stream, 0, 255)

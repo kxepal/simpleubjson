@@ -12,8 +12,10 @@ NOOP = type('NoopType', (object,), {'__slots__': ()})()
 #: EOS (end of stream) sentinel value
 EOS = type('EndOfStreamType', (object,), {'__slots__': ()})()
 
-from simpleubjson.decoder import decode_draft_8, streamify, MARKERS_DRAFT_8
-from simpleubjson.encoder import encode_draft_8
+from simpleubjson.decoder import (
+    streamify, decode_draft_8, decode_draft_9, MARKERS_DRAFT_8, MARKERS_DRAFT_9
+)
+from simpleubjson.encoder import encode_draft_8, encode_draft_9
 from simpleubjson.tools.inspect import pprint
 
 
@@ -28,7 +30,8 @@ def decode(data, default=None, allow_noop=False, spec='draft8'):
                     result value.
     :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
-    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :param spec: UBJSON specification. Supported Draft-8 and Draft-9
+                 specifications by ``draft-8`` or ``draft-9`` keys.
     :type spec: str
     :type allow_noop: bool
 
@@ -45,6 +48,9 @@ def decode(data, default=None, allow_noop=False, spec='draft8'):
     if spec.lower() in ['draft8', 'draft-8']:
         stream = streamify(data, MARKERS_DRAFT_8, default, allow_noop)
         return decode_draft_8(stream)
+    elif spec.lower() in ['draft9', 'draft-9']:
+        stream = streamify(data, MARKERS_DRAFT_9, default, allow_noop)
+        return decode_draft_9(stream)
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
 
@@ -58,7 +64,8 @@ def encode(data, output=None, default=None, spec='draft-8'):
                     matched for Python data type.
                     Takes encodable value as single argument and must return
                     valid UBJSON encodable value.
-    :param spec: UBJSON specification. Currently implemented only Draft-8.
+    :param spec: UBJSON specification. Supported Draft-8 and Draft-9
+                 specifications by ``draft-8`` or ``draft-9`` keys.
     :type spec: str
 
     :return: Encoded Python object. See mapping table below.
@@ -71,5 +78,7 @@ def encode(data, output=None, default=None, spec='draft-8'):
     """
     if spec.lower() in ['draft8', 'draft-8']:
         return encode_draft_8(data, output, default)
+    elif spec.lower() in ['draft9', 'draft-9']:
+        return encode_draft_9(data, output, default)
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
