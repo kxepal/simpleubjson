@@ -8,7 +8,7 @@
 #
 
 import sys
-from simpleubjson.decoder import streamify, UBJSONDecoder
+from simpleubjson.decoder import streamify, MARKERS_DRAFT_8, decode_tlv_draft_8
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,
@@ -48,16 +48,15 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 else:
                     inspect(stream, level + 1, length)
             elif length is None and value is not None:
-                value = decoder.decode_tlv(None, type, length, value)
+                value = decode_tlv_draft_8(None, type, length, value)
                 maybe_write('[%s] [%s]\n' % (type, value), level)
             else:
-                value = decoder.decode_tlv(None, type, length, value)
+                value = decode_tlv_draft_8(None, type, length, value)
                 maybe_write('[%s] [%s] [%s]\n' % (type, length, value), level)
             if size != 255:
                 size -= 1
                 if not size:
                     return
-    decoder = UBJSONDecoder()
-    stream = streamify(data, allow_noop)
+    stream = streamify(data, MARKERS_DRAFT_8, allow_noop)
     inspect(stream, 0, 255)
     output.flush()

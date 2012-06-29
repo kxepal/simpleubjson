@@ -15,10 +15,11 @@ from simpleubjson.compat import BytesIO, bytes, unicode, xrange
 import sys
 version = '.'.join(map(str, sys.version_info[:2]))
 
-__all__ = ['UBJSONDecoder', 'MARKERS', 'streamify']
+__all__ = ['decode_draft_8', 'decode_tlv_draft_8',
+           'MARKERS_DRAFT_8', 'streamify']
 
 #: Dict of valid UBJSON markers and struct format for their length and value.
-MARKERS = {
+MARKERS_DRAFT_8 = {
     'N': (None, None),
     'Z': (None, None),
     'E': (None, None),
@@ -89,7 +90,7 @@ def streamify(source, markers, default=None, allow_noop=False):
         yield marker, size, value
 
 
-class UBJSONDecoder(object):
+def decode_draft_8(stream):
     """Base decoder of UBJSON data to Python object that follows next rules:
 
     +--------+----------------------------+----------------------------+-------+
@@ -149,107 +150,95 @@ class UBJSONDecoder(object):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
+    for marker, size, value in stream:
+        return decode_tlv_draft_8(stream, marker, size, value)
+    raise ValueError('nothing more to decode')
 
-    def decode(self, stream):
-        """Decodes first value from :func:`~simpleubjson.decoder.streamify`-ed
-        ubjson data source."""
-        for marker, size, value in stream:
-            return self.decode_tlv(stream, marker, size, value)
-        raise ValueError('nothing more to decode')
-
-    def decode_tlv(self, stream, marker, size, value):
-        """Decodes single UBJSON value based on his marker, size and raw value.
-        """
-        if marker in 'BiILdD':
-            return value
-        elif marker in 'sShH':
-            if marker in 'sS':
-                return value.decode('utf-8')
-            else:
-                return Decimal(value.decode('utf-8'))
-        elif marker == 'a':
-            if size == 255:
-                return self.decode_unsized_array(stream)
-            else:
-                return list(self.decode_sized_array(stream, size))
-        elif marker == 'A':
-            return list(self.decode_sized_array(stream, size))
-        elif marker == 'o':
-            if size == 255:
-                return self.decode_unsized_object(stream)
-            else:
-                return dict(self.decode_sized_object(stream, size))
-        elif marker == 'O':
-            return dict(self.decode_sized_object(stream, size))
-        elif marker == 'F':
-            return False
-        elif marker == 'T':
-            return True
-        elif marker == 'Z':
-            return None
-        elif marker == 'N':
-            return NOOP
-        elif marker == 'E':
-            return EOS
+def decode_tlv_draft_8(stream, marker, size, value):
+    if marker in 'BiILdD':
+        return value
+    elif marker in 'sShH':
+        if marker in 'sS':
+            return value.decode('utf-8')
         else:
-            raise ValueError('Unknown marker %r' % marker)
+            return Decimal(value.decode('utf-8'))
+    elif marker in 'aA':
+        if size == 255:
+            return decode_unsized_array(decode_draft_8, stream)
+        return list(decode_sized_array(decode_draft_8, stream, size))
+    elif marker in 'oO':
+        if size == 255:
+            return decode_unsized_object(decode_draft_8, stream)
+        return dict(decode_sized_object(decode_draft_8, stream, size))
+    elif marker in 'F':
+        return False
+    elif marker == 'T':
+        return True
+    elif marker == 'Z':
+        return None
+    elif marker == 'N':
+        return NOOP
+    elif marker == 'E':
+        return EOS
+    else:
+        raise ValueError('Unknown marker %r' % marker)
 
-    def decode_sized_array(self, stream, size):
-        for round in xrange(size):
-            while True:
-                item = self.decode(stream)
-                if item is not NOOP:
-                    break
-            if item is EOS:
-                raise ValueError('unexpectable end of stream marker')
-            if isinstance(item, GeneratorType):
-                item = list(item)
-            yield item
+def decode_unsized_array(decode, stream):
+    while True:
+        item = decode(stream)
+        if item is EOS:
+            break
+        elif isinstance(item, GeneratorType):
+            item = list(item)
+        yield item
 
-    def decode_unsized_array(self, stream):
+def decode_unsized_object(decode, stream):
+    while True:
         while True:
-            item = self.decode(stream)
-            if item is EOS:
+            key = decode(stream)
+            if key is not NOOP:
                 break
-            elif isinstance(item, GeneratorType):
-                item = list(item)
-            yield item
-
-    def decode_sized_object(self, stream, size):
-        for round in xrange(size):
-            while True:
-                key = self.decode(stream)
-                if key is not NOOP:
-                    break
-            if not isinstance(key, unicode):
-                raise ValueError('key should be string, not %r' % key)
-            while True:
-                value = self.decode(stream)
-                if value is not NOOP:
-                    break
-            if value is EOS:
-                raise ValueError('unexpectable end of stream marker')
-            if isinstance(value, GeneratorType):
-                value = list(value)
-            yield key, value
-
-    def decode_unsized_object(self, stream):
+            yield key, key
+        if key is EOS:
+            break
+        if not isinstance(key, unicode):
+            raise ValueError('key should be string, not %r' % key)
         while True:
-            while True:
-                key = self.decode(stream)
-                if key is not NOOP:
-                    break
-                yield key, key
-            if key is EOS:
+            value = decode(stream)
+            if value is not NOOP:
                 break
-            if not isinstance(key, unicode):
-                raise ValueError('key should be string, not %r' % key)
-            while True:
-                value = self.decode(stream)
-                if value is not NOOP:
-                    break
-            if value is EOS:
-                raise ValueError('unexpectable end of stream marker')
-            if isinstance(value, GeneratorType):
-                value = list(value)
-            yield key, value
+        if value is EOS:
+            raise ValueError('unexpectable end of stream marker')
+        if isinstance(value, GeneratorType):
+            value = list(value)
+        yield key, value
+
+def decode_sized_array(decode, stream, size):
+    for round in xrange(size):
+        while True:
+            item = decode(stream)
+            if item is not NOOP:
+                break
+        if item is EOS:
+            raise ValueError('unexpectable end of stream marker')
+        if isinstance(item, GeneratorType):
+            item = list(item)
+        yield item
+
+def decode_sized_object(decode, stream, size):
+    for round in xrange(size):
+        while True:
+            key = decode(stream)
+            if key is not NOOP:
+                break
+        if not isinstance(key, unicode):
+            raise ValueError('key should be string, not %r' % key)
+        while True:
+            value = decode(stream)
+            if value is not NOOP:
+                break
+        if value is EOS:
+            raise ValueError('unexpectable end of stream marker')
+        if isinstance(value, GeneratorType):
+            value = list(value)
+        yield key, value
