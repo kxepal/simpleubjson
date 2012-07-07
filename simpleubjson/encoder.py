@@ -120,7 +120,7 @@ def encode_draft_8(value, output=None, default=None):
             body = tuple()
             for key, val in value:
                 assert isinstance(key, basestring), 'object key should be a string'
-                body = chain(body, encode((key, val)))
+                body = chain(body, encode(key), encode(val))
             tail = (MARKER_E,)
             return chain(header, body, tail)
         elif maybe_one_of(tval, Decimal):
