@@ -43,7 +43,8 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                     if type == 'E' and size == 255:
                         level -= 1
                     maybe_write('[%s]\n' % (type,), level)
-                    return
+                    if type == 'E':
+                        return
                 elif spec == 'draft9':
                     if type in 'AO':
                         maybe_write('[%s]\n' % (type,), level)
