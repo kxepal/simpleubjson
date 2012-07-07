@@ -37,7 +37,7 @@ except ImportError:
 
 setup(
     name = 'simpleubjson',
-    version = '0.4',
+    version = '0.5',
     description = 'Simple universal binary json decoder/encoder for Python.',
 
     author = 'Alexander Shorin',
