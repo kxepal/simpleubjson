@@ -33,6 +33,7 @@ MARKER_T = b('T')
 MARKER_B = b('B')
 MARKER_i = b('i')
 MARKER_I = b('I')
+MARKER_l = b('l')
 MARKER_L = b('L')
 MARKER_d = b('d')
 MARKER_D = b('D')
@@ -166,11 +167,11 @@ def encode_draft_9(value, output=None, default=None):
             return MARKER_Z,
         elif maybe_one_of (tval, int, long):
             if is_byte(value):
-                return MARKER_B, _pack('>b', value)
+                return MARKER_i, _pack('>b', value)
             elif is_int16(value):
-                return MARKER_i, _pack('>h', value)
+                return MARKER_I, _pack('>h', value)
             elif is_int32(value):
-                return MARKER_I, _pack('>i', value)
+                return MARKER_l, _pack('>i', value)
             elif is_int64(value):
                 return MARKER_L, _pack('>q', value)
             else:

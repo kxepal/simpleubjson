@@ -42,9 +42,9 @@ MARKERS_DRAFT_8 = {
 }
 
 _NUMERIC_MARKERS = {
-    'B': (None, '>b'),
-    'i': (None, '>h'),
-    'I': (None, '>i'),
+    'i': (None, '>b'),
+    'I': (None, '>h'),
+    'l': (None, '>i'),
     'L': (None, '>q'),
 }
 MARKERS_DRAFT_9 = {
@@ -53,9 +53,9 @@ MARKERS_DRAFT_9 = {
     'E': (None, None),
     'F': (None, None),
     'T': (None, None),
-    'B': (None, '>b'),
-    'i': (None, '>h'),
-    'I': (None, '>i'),
+    'i': (None, '>b'),
+    'I': (None, '>h'),
+    'l': (None, '>i'),
     'L': (None, '>q'),
     'd': (None, '>f'),
     'D': (None, '>d'),
@@ -203,11 +203,11 @@ def decode_draft_9(stream):
     +--------+----------------------------+----------------------------+-------+
     | ``T``  | true                       | bool                       |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``B``  | byte                       | int                        |       |
+    | ``i``  | int8                       | int                        |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``i``  | int16                      | int                        |       |
+    | ``I``  | int16                      | int                        |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``I``  | int32                      | int                        |       |
+    | ``l``  | int32                      | int                        |       |
     +--------+----------------------------+----------------------------+-------+
     | ``L``  | int64                      | long                       |       |
     +--------+----------------------------+----------------------------+-------+
@@ -271,7 +271,7 @@ def decode_tlv_draft_8(stream, marker, size, value):
         raise ValueError('Unknown marker %r' % marker)
 
 def decode_tlv_draft_9(stream, marker, size, value):
-    if marker in 'BiILdD':
+    if marker in 'iIlLdD':
         return value
     elif marker in 'SH':
         value = value.decode('utf-8')
