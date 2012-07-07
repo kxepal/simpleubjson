@@ -398,7 +398,7 @@ class StreamTestCase(Draft8TestCase):
         data = self.encode(getattr(data, 'iteritems', data.items)())
         self.assertEqual(
             data,
-            b('o\xffa\x02s\x03bazB\x02a\x02s\x03fooB\x00a\x02s\x03barB\x01E')
+            b('o\xffs\x03bazB\x02s\x03fooB\x00s\x03barB\x01E')
         )
 
     def test_fail_decode_on_early_array_end(self):
