@@ -18,6 +18,7 @@ from simpleubjson.decoder import (
 from simpleubjson.encoder import encode_draft_8, encode_draft_9
 from simpleubjson.tools.inspect import pprint
 
+__all__ = ['decode', 'encode', 'pprint', 'NOOP', 'EOS']
 
 def decode(data, default=None, allow_noop=False, spec='draft8'):
     """Decodes input stream of UBJSON data to Python object.
