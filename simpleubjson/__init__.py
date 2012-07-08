@@ -31,10 +31,10 @@ def decode(data, default=None, allow_noop=False, spec='draft8'):
                     result value.
     :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
+    :type allow_noop: bool
     :param spec: UBJSON specification. Supported Draft-8 and Draft-9
                  specifications by ``draft-8`` or ``draft-9`` keys.
     :type spec: str
-    :type allow_noop: bool
 
     :return: Decoded Python object. See mapping table below.
 
