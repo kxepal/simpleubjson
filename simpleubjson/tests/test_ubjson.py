@@ -7,7 +7,6 @@
 # you should have received as part of this distribution.
 #
 
-import datetime
 import unittest
 import simpleubjson
 from types import GeneratorType
