@@ -43,9 +43,11 @@ def pprint(data, output=sys.stdout, allow_noop=True,
         for marker, size, value in stream:
             # standalone markers
             if size is None and value is None:
-                maybe_write('[%s]\n' % (marker,), level)
                 if marker == 'E':
+                    maybe_write('[%s]\n' % (marker,), level - 1)
                     return
+                else:
+                    maybe_write('[%s]\n' % (marker,), level)
 
             # sized containers
             elif size is not None and value is None:
