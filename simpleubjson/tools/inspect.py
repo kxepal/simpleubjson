@@ -8,9 +8,9 @@
 #
 
 import sys
-from functools import partial
 import simpleubjson
 import simpleubjson.decoder as decoder
+from simpleubjson.compat import partial
 
 def pprint(data, output=sys.stdout, allow_noop=True,
            indent='    ', max_level=None, spec='draft-8'):
