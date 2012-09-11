@@ -73,9 +73,8 @@ def encode(data, output=None, default=None, spec='draft-8'):
                    returned instead of written into.
     :param default: Callable object that would be used if there is no handlers
                     matched for Python data type.
-                    Takes `Encoder` callable object and processed value as
-                    arguments while it should return valid UBJSON encodable
-                    value.
+                    Takes encodable value as single argument and must return
+                    valid UBJSON encodable value.
     :param spec: UBJSON specification. Supported Draft-8 and Draft-9
                  specifications by ``draft-8`` or ``draft-9`` keys.
     :type spec: str
