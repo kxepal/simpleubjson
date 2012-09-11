@@ -8,63 +8,16 @@
 #
 
 import struct
-from decimal import Decimal
-from types import GeneratorType
-from simpleubjson import NOOP, EOS
-from simpleubjson.compat import BytesIO, bytes, unicode, xrange
+from simpleubjson.markers import (
+    DRAFT8_MARKERS, DRAFT9_MARKERS,
+    NumericMarker, StreamedArrayMarker, StreamedObjectMarker
+)
+from simpleubjson.compat import BytesIO, bytes, unicode
 import sys
 version = '.'.join(map(str, sys.version_info[:2]))
 
-__all__ = ['decode_draft_8', 'decode_tlv_draft_8',
-           'MARKERS_DRAFT_8', 'streamify']
+__all__ = ['Decoder', 'Draft8Decoder', 'Draft9Decoder', 'streamify']
 
-#: Dict of valid UBJSON markers and struct format for their length and value.
-MARKERS_DRAFT_8 = {
-    'N': (None, None),
-    'Z': (None, None),
-    'E': (None, None),
-    'F': (None, None),
-    'T': (None, None),
-    'B': (None, '>b'),
-    'i': (None, '>h'),
-    'I': (None, '>i'),
-    'L': (None, '>q'),
-    'd': (None, '>f'),
-    'D': (None, '>d'),
-    's': ('>B', '>%ds'),
-    'S': ('>I', '>%ds'),
-    'h': ('>B', '>%ds'),
-    'H': ('>I', '>%ds'),
-    'a': ('>B', None),
-    'A': ('>I', None),
-    'o': ('>B', None),
-    'O': ('>I', None),
-}
-
-_NUMERIC_MARKERS = {
-    'i': (None, '>b'),
-    'I': (None, '>h'),
-    'l': (None, '>i'),
-    'L': (None, '>q'),
-}
-MARKERS_DRAFT_9 = {
-    'N': (None, None),
-    'Z': (None, None),
-    'E': (None, None),
-    'F': (None, None),
-    'T': (None, None),
-    'i': (None, '>b'),
-    'I': (None, '>h'),
-    'l': (None, '>i'),
-    'L': (None, '>q'),
-    'd': (None, '>f'),
-    'D': (None, '>d'),
-    'S': (_NUMERIC_MARKERS, '>%ds'),
-    'H': (_NUMERIC_MARKERS, '>%ds'),
-    'A': (None, None),
-    'O': (None, None),
-}
-del _NUMERIC_MARKERS
 
 def streamify(source, markers, default=None, allow_noop=False):
     """Wraps source data into stream that emits data in TLV-format.
@@ -84,49 +37,73 @@ def streamify(source, markers, default=None, allow_noop=False):
     :return: Generator of (type, length, value) data set.
     """
     if isinstance(source, unicode):
-        source = source.encode('utf-8')
-    if isinstance(source, bytes):
+        source = BytesIO(source.encode('utf-8'))
+    elif isinstance(source, bytes):
         source = BytesIO(source)
     assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
     read = source.read
     _unpack = struct.unpack
     _calc = struct.calcsize
+    size_marker = NumericMarker
     while True:
-        marker = read(1)
-        if not marker:
+        tag = read(1)
+        if not tag:
             break
         if version >= '3.0':
-            marker = marker.decode('utf-8')
-        if not allow_noop and marker == 'N':
+            tag = tag.decode('utf-8')
+        if not allow_noop and tag == 'N':
             continue
-        if marker not in markers:
+        if tag not in markers:
             if default is None:
-                raise ValueError('Unknown marker %r' % marker)
-            else:
-                yield default(marker)
-                continue
-        size, value = markers[marker]
-        if size is not None:
-            if isinstance(size, dict):
-                smarker = read(1)
-                if not smarker:
+                raise ValueError('Unknown marker %r' % tag)
+            yield default(source, markers, tag)
+            continue
+        marker = markers[tag]
+        length = marker.length
+        value = marker.value
+        if length is not None:
+            if length is size_marker:
+                stag = read(1)
+                if not stag:
                     break
                 if version >= '3.0':
-                    smarker = smarker.decode('utf-8')
-                if not smarker in size:
-                    raise ValueError('Invalid size marker %s' % smarker)
-                size = size[smarker][1]
-            size = _unpack(size, read(_calc(size)))[0]
-            assert size >= 0, 'Negative size for marker %s' % marker
+                    stag = stag.decode('utf-8')
+                if stag not in markers:
+                    raise ValueError('Unknown size marker %r' % stag)
+                smarker = markers[stag]
+                if not isinstance(smarker, size_marker):
+                    raise ValueError('Invalid size marker %r' % stag)
+                length = smarker.value
+            length = _unpack(length, read(_calc(length)))[0]
         if value is not None:
-            if size is not None:
-                value = value % size
+            if length is not None:
+                assert length >= 0, 'Negative size for marker %r' % tag
+                if '%' in value:
+                    value = value % length
             value = _unpack(value, read(_calc(value)))[0]
-        yield marker, size, value
+        yield marker, (tag, length, value)
 
 
-def decode_draft_8(stream):
-    """Base decoder of UBJSON data to Python object that follows next rules:
+class Decoder(object):
+
+    _markers = None
+
+    def __call__(self, stream):
+        for marker, tlv in stream:
+            return self.decode_tlv(stream, marker, tlv)
+        raise ValueError('nothing to decode')
+
+    def decode_tlv(self, stream, marker, tlv):
+        return marker.decode(self, stream, tlv)
+
+    @property
+    def markers(self):
+        return self._markers
+
+
+class Draft8Decoder(Decoder):
+    """Decoder of UBJSON data to Python object that follows Draft 8
+    specification rules with next data mapping:
 
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
@@ -185,12 +162,20 @@ def decode_draft_8(stream):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    for marker, size, value in stream:
-        return decode_tlv_draft_8(stream, marker, size, value)
-    raise ValueError('nothing more to decode')
+    _markers = dict((marker.tag, marker) for marker in DRAFT8_MARKERS)
 
-def decode_draft_9(stream):
-    """Base decoder of UBJSON data to Python object that follows next rules:
+    def decode_tlv(self, stream, marker, tlv):
+        tag, length, value = tlv
+        if tag == 'a' and length == 255:
+            return StreamedArrayMarker().decode(self, stream, tlv)
+        if tag == 'o' and length == 255:
+            return StreamedObjectMarker().decode(self, stream, tlv)
+        return marker.decode(self, stream, tlv)
+
+
+class Draft9Decoder(Decoder):
+    """Decoder of UBJSON data to Python object that follows Draft 9
+    specification rules with next data mapping:
 
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
@@ -237,120 +222,4 @@ def decode_draft_9(stream):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    for marker, size, value in stream:
-        return decode_tlv_draft_9(stream, marker, size, value)
-    raise ValueError('nothing more to decode')
-
-def decode_tlv_draft_8(stream, marker, size, value):
-    if marker in 'BiILdD':
-        return value
-    elif marker in 'sShH':
-        if marker in 'sS':
-            return value.decode('utf-8')
-        else:
-            return Decimal(value.decode('utf-8'))
-    elif marker in 'aA':
-        if size == 255:
-            return decode_unsized_array(decode_draft_8, stream)
-        return list(decode_sized_array(decode_draft_8, stream, size))
-    elif marker in 'oO':
-        if size == 255:
-            return decode_unsized_object(decode_draft_8, stream)
-        return dict(decode_sized_object(decode_draft_8, stream, size))
-    elif marker in 'F':
-        return False
-    elif marker == 'T':
-        return True
-    elif marker == 'Z':
-        return None
-    elif marker == 'N':
-        return NOOP
-    elif marker == 'E':
-        return EOS
-    else:
-        raise ValueError('Unknown marker %r' % marker)
-
-def decode_tlv_draft_9(stream, marker, size, value):
-    if marker in 'iIlLdD':
-        return value
-    elif marker in 'SH':
-        value = value.decode('utf-8')
-        if marker == 'H':
-            return Decimal(value)
-        return value
-    elif marker in 'A':
-        return decode_unsized_array(decode_draft_9, stream)
-    elif marker in 'O':
-        return decode_unsized_object(decode_draft_9, stream)
-    elif marker in 'F':
-        return False
-    elif marker == 'T':
-        return True
-    elif marker == 'Z':
-        return None
-    elif marker == 'N':
-        return NOOP
-    elif marker == 'E':
-        return EOS
-    else:
-        raise ValueError('Unknown marker %r' % marker)
-
-def decode_unsized_array(decode, stream):
-    while True:
-        item = decode(stream)
-        if item is EOS:
-            break
-        elif isinstance(item, GeneratorType):
-            item = list(item)
-        yield item
-
-def decode_unsized_object(decode, stream):
-    while True:
-        while True:
-            key = decode(stream)
-            if key is not NOOP:
-                break
-            yield key, key
-        if key is EOS:
-            break
-        if not isinstance(key, unicode):
-            raise ValueError('key should be string, not %r' % key)
-        while True:
-            value = decode(stream)
-            if value is not NOOP:
-                break
-        if value is EOS:
-            raise ValueError('unexpectable end of stream marker')
-        if isinstance(value, GeneratorType):
-            value = list(value)
-        yield key, value
-
-def decode_sized_array(decode, stream, size):
-    for round in xrange(size):
-        while True:
-            item = decode(stream)
-            if item is not NOOP:
-                break
-        if item is EOS:
-            raise ValueError('unexpectable end of stream marker')
-        if isinstance(item, GeneratorType):
-            item = list(item)
-        yield item
-
-def decode_sized_object(decode, stream, size):
-    for round in xrange(size):
-        while True:
-            key = decode(stream)
-            if key is not NOOP:
-                break
-        if not isinstance(key, unicode):
-            raise ValueError('key should be string, not %r' % key)
-        while True:
-            value = decode(stream)
-            if value is not NOOP:
-                break
-        if value is EOS:
-            raise ValueError('unexpectable end of stream marker')
-        if isinstance(value, GeneratorType):
-            value = list(value)
-        yield key, value
+    _markers = dict((marker.tag, marker) for marker in DRAFT9_MARKERS)

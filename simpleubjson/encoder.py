@@ -7,46 +7,18 @@
 # you should have received as part of this distribution.
 #
 
-import struct
+from collections import Iterable, Sized, Mapping
 from decimal import Decimal
-from itertools import chain
-from types import GeneratorType
-from simpleubjson import NOOP, EOS
-from simpleubjson.compat import b, unicode, bytes, basestring, long, \
-                                XRangeType, dict_keysiterator, \
-                                dict_valuesiterator, dict_itemsiterator
 
-__all__ = ['encode_draft_8']
-
-is_byte = lambda value: (-2 ** 7) <= value <= (2 ** 7 - 1)
-is_int16 = lambda value: (-2 ** 15) <= value <= (2 ** 15 - 1)
-is_int32 = lambda value: (-2 ** 31) <= value <= (2 ** 31 - 1)
-is_int64 = lambda value: (-2 ** 63) <= value <= (2 ** 63 - 1)
-is_float = lambda value: 1.18e-38 <= abs(value) <= 3.4e38
-is_double = lambda value: 2.23e-308 <= abs(value) < 1.8e308 # 1.8e308 is inf
-is_infinity = lambda value: value == float('inf') or value == float('-inf')
-
-MARKER_Z = b('Z')
-MARKER_N = b('N')
-MARKER_F = b('F')
-MARKER_T = b('T')
-MARKER_B = b('B')
-MARKER_i = b('i')
-MARKER_I = b('I')
-MARKER_l = b('l')
-MARKER_L = b('L')
-MARKER_d = b('d')
-MARKER_D = b('D')
-MARKER_s = b('s')
-MARKER_S = b('S')
-MARKER_h = b('h')
-MARKER_H = b('H')
-MARKER_a = b('a')
-MARKER_A = b('A')
-MARKER_o = b('o')
-MARKER_O = b('O')
-MARKER_E = b('E')
-MARKER_FF = b('\xff')
+from simpleubjson import NOOP, EOS, EOS_A, EOS_O
+from simpleubjson.compat import (
+    basestring, bytes, long, unicode, XRangeType,
+    dict_itemsiterator, dict_keysiterator, dict_valuesiterator
+)
+from simpleubjson.markers import (
+    DRAFT8_MARKERS, DRAFT9_MARKERS,
+    StreamedArrayMarker, StreamedObjectMarker
+)
 
 def maybe_one_of(tval, *types):
     if tval in types:
@@ -56,175 +28,129 @@ def maybe_one_of(tval, *types):
             return True
     return False
 
-def encode_draft_8(value, output=None, default=None):
-    if output is None:
-        return bytes().join(iter_encode_draft_8(value, default))
-    for chunk in iter_encode_draft_8(value, default):
-        output.write(chunk)
 
-def iter_encode_draft_8(value, default=None, _pack=struct.pack):
-    encode = iter_encode_draft_8
-    tval = type(value)
-    if value is None:
-        return MARKER_Z,
-    elif maybe_one_of (tval, int, long):
-        if is_byte(value):
-            return MARKER_B, _pack('>b', value)
-        elif is_int16(value):
-            return MARKER_i, _pack('>h', value)
-        elif is_int32(value):
-            return MARKER_I, _pack('>i', value)
-        elif is_int64(value):
-            return MARKER_L, _pack('>q', value)
-        else:
-            return encode_huge_number_draft_8(value)
-    elif maybe_one_of(tval, float):
-        if is_float(value):
-            return MARKER_d, struct.pack('>f', value)
-        elif is_double(value):
-            return MARKER_D, struct.pack('>d', value)
-        elif is_infinity(value):
-            return MARKER_Z,
-        else:
-            return encode_huge_number_draft_8(value)
-    elif maybe_one_of(tval, bytes, unicode):
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        length = len(value)
-        if length < 255:
-            return (MARKER_s, struct.pack('>B', length),
-                    struct.pack('>%ds' % length, value))
-        else:
-            return (MARKER_S, struct.pack('>I', length),
-                    struct.pack('>%ds' % length, value))
-    elif maybe_one_of(tval, tuple, list, set, frozenset):
-        size = len(value)
-        if size < 255:
-            header = (MARKER_a, struct.pack('>B', size))
-        else:
-            header = (MARKER_A, struct.pack('>I', size))
-        body = (chunk for item in value for chunk in encode(item))
-        return chain(header, body)
-    elif maybe_one_of(tval, GeneratorType, XRangeType,
-                      dict_keysiterator, dict_valuesiterator):
-        header = (MARKER_a, MARKER_FF)
-        body = (chunk for item in value for chunk in encode(item))
-        tail = (MARKER_E,)
-        return chain(header, body, tail)
-    elif maybe_one_of(tval, dict):
-        size = len(value)
-        if size < 255:
-            header = (MARKER_o, struct.pack('>B', size))
-        else:
-            header = (MARKER_O, struct.pack('>I', size))
-        body = tuple()
-        for key, val in value.items():
-            assert isinstance(key, basestring), 'object key should be a string'
-            body = chain(body, encode(key), encode(val))
-        return chain(header, body)
-    elif maybe_one_of(tval, dict_itemsiterator):
-        header = (MARKER_o, MARKER_FF)
-        body = tuple()
-        for key, val in value:
-            assert isinstance(key, basestring), 'object key should be a string'
-            body = chain(body, encode(key), encode(val))
-        tail = (MARKER_E,)
-        return chain(header, body, tail)
-    elif maybe_one_of(tval, Decimal):
-        return encode_huge_number_draft_8(value)
-    elif maybe_one_of (tval, bool):
-        return [MARKER_F, MARKER_T][value],
-    elif value is NOOP:
-        return MARKER_N,
-    elif value is EOS:
-        return MARKER_E,
-    elif default is not None:
-        return encode(default(value))
-    else:
-        raise TypeError('Unable to encode value %r (%r)' % (value, tval))
+class Encoder(object):
 
-def encode_draft_9(value, output=None, default=None):
-    if output is None:
-        return bytes().join(iter_encode_draft_9(value, default))
-    for chunk in iter_encode_draft_9(value, default):
-        output.write(chunk)
+    markers = {}
 
-def iter_encode_draft_9(value, default=None, _pack = struct.pack):
-    encode = iter_encode_draft_9
-    tval = type(value)
-    if value is None:
-        return MARKER_Z,
-    elif maybe_one_of (tval, int, long):
-        if is_byte(value):
-            return MARKER_i, _pack('>b', value)
-        elif is_int16(value):
-            return MARKER_I, _pack('>h', value)
-        elif is_int32(value):
-            return MARKER_l, _pack('>i', value)
-        elif is_int64(value):
-            return MARKER_L, _pack('>q', value)
-        else:
-            return encode_huge_number_draft_9(encode, value)
-    elif maybe_one_of(tval, float):
-        if is_float(value):
-            return MARKER_d, struct.pack('>f', value)
-        elif is_double(value):
-            return MARKER_D, struct.pack('>d', value)
-        elif is_infinity(value):
-            return MARKER_Z,
-        else:
-            return encode_huge_number_draft_9(encode, value)
-    elif maybe_one_of(tval, bytes, unicode):
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        size = len(value)
-        data = struct.pack('>%ds' % size, value)
-        return chain((MARKER_S,), encode(size), [data])
-    elif maybe_one_of(tval, tuple, list, set, frozenset,
-                      GeneratorType, XRangeType,
-                      dict_keysiterator, dict_valuesiterator):
-        header = (MARKER_A,)
-        body = (chunk for item in value for chunk in encode(item))
-        tail = (MARKER_E,)
-        return chain(header, body, tail)
-    elif maybe_one_of(tval, dict, dict_itemsiterator):
-        header = (MARKER_O,)
-        body = tuple()
-        if isinstance(value, dict):
-            items = value.items()
-        else:
-            items = value
-        for key, val in items:
-            assert isinstance(key, basestring), 'object key should be a string'
-            body = chain(body, encode(key), encode(val))
-        tail = (MARKER_E,)
-        return chain(header, body, tail)
-    elif maybe_one_of(tval, Decimal):
-        return encode_huge_number_draft_9(encode, value)
-    elif maybe_one_of (tval, bool):
-        return [MARKER_F, MARKER_T][value],
-    elif value is NOOP:
-        return MARKER_N,
-    elif value is EOS:
-        return MARKER_E,
-    elif default is not None:
-        return encode(default(value))
-    else:
-        raise TypeError('Unable to encode value %r (%r)' % (value, tval))
+    def __call__(self, obj, output=None, default=None):
+        if output is None:
+           return bytes().join(self.encode(obj, default))
+        for chunk in self.encode(obj, default):
+            output.write(chunk)
+
+    def encode(self, obj, default=None):
+        if obj is None:
+            return self.markers['Z'].encode(self, obj)
+        elif isinstance(obj, bool):
+            return self.markers[['F', 'T'][obj]].encode(self, obj)
+        elif obj is NOOP:
+            return self.markers['N'].encode(self, obj)
+        elif default is not None:
+            return self.encode(default(obj))
+        raise TypeError('unable to encode value %r %r' % (obj, type(obj)))
 
 
-def encode_huge_number_draft_8(value):
-    value = unicode(value).encode('utf-8')
-    size = len(value)
-    if size < 255:
-        return  (MARKER_h, struct.pack('>B', size),
-                 struct.pack('>%ds' % size, value))
-    else:
-        return  (MARKER_H, struct.pack('>I', size),
-                 struct.pack('>%ds' % size, value))
+class Draft8Encoder(Encoder):
 
-def encode_huge_number_draft_9(encode, value):
-    value = unicode(value).encode('utf-8')
-    size = len(value)
-    data = struct.pack('>%ds' % size, value)
-    return chain((MARKER_H,), encode(size), (data,))
+    __slots__ = ()
+
+    markers = dict((marker.tag, marker) for marker in DRAFT8_MARKERS)
+
+    def encode(self, obj, default=None):
+        if isinstance(obj, (int, long)) and not isinstance(obj, bool):
+            if (-2 ** 7) <= obj <= (2 ** 7 - 1):
+                marker = self.markers['B']
+            elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
+                marker = self.markers['i']
+            elif (-2 ** 31) <= obj <= (2 ** 31 - 1):
+                marker = self.markers['I']
+            elif (-2 ** 63) <= obj <= (2 ** 63 - 1):
+                marker = self.markers['L']
+            else:
+                obj = unicode(obj).encode('utf-8')
+                marker = self.markers[['h', 'H'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        elif isinstance(obj, float):
+            if 1.18e-38 <= abs(obj) <= 3.4e38:
+                marker = self.markers['d']
+            elif 2.23e-308 <= abs(obj) < 1.8e308:
+                marker = self.markers['D']
+            elif obj == float('inf') or obj == float('-inf'):
+                marker = self.markers['Z']
+            else:
+                obj = unicode(obj).encode('utf-8')
+                marker = self.markers[['h', 'H'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        elif isinstance(obj, basestring):
+            marker = self.markers[['s', 'S'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        elif isinstance(obj, Mapping):
+            marker = self.markers[['o', 'O'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        elif isinstance(obj, dict_itemsiterator):
+            return StreamedObjectMarker().encode(self, obj)
+        elif isinstance(obj, XRangeType):
+            return StreamedArrayMarker().encode(self, obj)
+        elif isinstance(obj, (dict_keysiterator, dict_valuesiterator)):
+            return StreamedArrayMarker().encode(self, obj)
+        elif isinstance(obj, Iterable) and isinstance(obj, Sized):
+            marker = self.markers[['a', 'A'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        elif isinstance(obj, Iterable):
+            return StreamedArrayMarker().encode(self, obj)
+        elif obj is EOS:
+            return self.markers['E'].encode(self, obj)
+        elif isinstance(obj, Decimal):
+            obj = unicode(obj).encode('utf-8')
+            marker = self.markers[['h', 'H'][len(obj) >= 255]]
+            return marker.encode(self, obj)
+        else:
+            return super(Draft8Encoder, self).encode(obj, default)
+
+
+class Draft9Encoder(Encoder):
+
+    __slots__ = ()
+
+    markers = dict((marker.tag, marker) for marker in DRAFT9_MARKERS)
+
+    def encode(self, obj, default=None):
+        if isinstance(obj, (int, long)) and not isinstance(obj, bool):
+            if (-2 ** 7) <= obj <= (2 ** 7 - 1):
+                marker = self.markers['i']
+            elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
+                marker = self.markers['I']
+            elif (-2 ** 31) <= obj <= (2 ** 31 - 1):
+                marker = self.markers['l']
+            elif (-2 ** 63) <= obj <= (2 ** 63 - 1):
+                marker = self.markers['L']
+            else:
+                marker = self.markers['H']
+                obj = unicode(obj).encode('utf-8')
+            return marker.encode(self, obj)
+        elif isinstance(obj, float):
+            if 1.18e-38 <= abs(obj) <= 3.4e38:
+                marker = self.markers['d']
+            elif 2.23e-308 <= abs(obj) < 1.8e308:
+                marker = self.markers['D']
+            elif obj == float('inf') or obj == float('-inf'):
+                marker = self.markers['Z']
+            else:
+                marker = self.markers['H']
+                obj = unicode(obj).encode('utf-8')
+            return marker.encode(self, obj)
+        elif isinstance(obj, basestring):
+            return self.markers['S'].encode(self, obj)
+        elif isinstance(obj, (Mapping, dict_itemsiterator)):
+            return self.markers['{'].encode(self, obj)
+        elif isinstance(obj, Iterable):
+            return self.markers['['].encode(self, obj)
+        elif obj is EOS_A:
+            return self.markers[']'].encode(self, obj)
+        elif obj is EOS_O:
+            return self.markers['}'].encode(self, obj)
+        elif isinstance(obj, Decimal):
+            return self.markers['H'].encode(self, obj)
+        else:
+            return super(Draft9Encoder, self).encode(obj, default)

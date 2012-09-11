@@ -37,9 +37,9 @@ class DecoderTestCase(Draft8TestCase):
         self.assertRaises(ValueError, self.decode, 'Я')
 
     def test_custom_default_handler(self):
-        def dummy(marker):
-            assert marker == '%'
-            return 's', 3, b('foo')
+        def dummy(stream, markers, tag):
+            assert tag == '%'
+            return markers['s'], ('s', 3, b('foo'))
         data = self.decode(b('%'), default=dummy)
         self.assertEqual(data, 'foo')
 

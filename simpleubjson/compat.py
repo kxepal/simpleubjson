@@ -9,19 +9,6 @@
 
 import sys
 
-try:
-    from functools import partial
-except ImportError:
-    def partial(func, *args, **keywords):
-        def newfunc(*fargs, **fkeywords):
-            newkeywords = keywords.copy()
-            newkeywords.update(fkeywords)
-            return func(*(args + fargs), **newkeywords)
-        newfunc.func = func
-        newfunc.args = args
-        newfunc.keywords = keywords
-        return newfunc
-
 version = '.'.join(map(str, sys.version_info[:2]))
 
 if version >= '3.0':
@@ -31,7 +18,6 @@ if version >= '3.0':
     bytes = bytes
     long = int
     xrange = range
-    XRangeType = type(xrange(0))
 
     d = {}
     dict_keysiterator = type(d.keys())

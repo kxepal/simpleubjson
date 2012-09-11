@@ -37,9 +37,9 @@ class DecoderTestCase(Draft9TestCase):
         self.assertRaises(ValueError, self.decode, 'Я')
 
     def test_custom_default_handler(self):
-        def dummy(marker):
-            assert marker == '%'
-            return 'S', 3, b('foo')
+        def dummy(stream, markers, tag):
+            assert tag == '%'
+            return markers['S'], ('s', 3, b('foo'))
         data = self.decode(b('%'), default=dummy)
         self.assertEqual(data, 'foo')
 
@@ -53,7 +53,7 @@ class EncoderTestCase(Draft9TestCase):
         stream = StringIO()
         self.encode((i for i in range(5)), stream)
         self.assertEqual(stream.getvalue(),
-                         b('Ai\x00i\x01i\x02i\x03i\x04E'))
+                         b('[i\x00i\x01i\x02i\x03i\x04]'))
 
     def test_custom_default_handler(self):
         sentinel = object()
@@ -61,7 +61,7 @@ class EncoderTestCase(Draft9TestCase):
             assert value is sentinel
             return [b('sentinel')]
         data = self.encode(sentinel, default=dummy)
-        self.assertEqual(data, b('ASi\x08sentinelE'))
+        self.assertEqual(data, b('[Si\x08sentinel]'))
 
 
 class NoopTestCase(Draft9TestCase):
@@ -302,61 +302,61 @@ class StringTestCase(Draft9TestCase):
 class ArrayTestCase(Draft9TestCase):
 
     def test_decode_array(self):
-        data = list(self.decode(b('Ai\x01i\x02i\x03E')))
+        data = list(self.decode(b('[i\x01i\x02i\x03]')))
         self.assertEqual(data, [1, 2, 3])
 
     def test_encode_array(self):
         data = self.encode([1, 2, 3])
-        self.assertEqual(data, b('Ai\x01i\x02i\x03E'))
+        self.assertEqual(data, b('[i\x01i\x02i\x03]'))
 
     def test_encode_tuple(self):
         data = self.encode((1, 2, 3))
-        self.assertEqual(data, b('Ai\x01i\x02i\x03E'))
+        self.assertEqual(data, b('[i\x01i\x02i\x03]'))
 
     def test_decode_large_array(self):
-        data = list(self.decode(b('A') + b('i\x01') * 1024 + b('E')))
+        data = list(self.decode(b('[') + b('i\x01') * 1024 + b(']')))
         self.assertEqual(data, list([1] * 1024))
 
     def test_encode_range(self):
         data = self.encode(xrange(4))
-        self.assertEqual(data, b('Ai\x00i\x01i\x02i\x03E'))
+        self.assertEqual(data, b('[i\x00i\x01i\x02i\x03]'))
 
     def test_encode_large_array(self):
         data = self.encode(list([1] * 1024))
-        self.assertEqual(data, b('A') + b('i\x01') * 1024 + b('E'))
+        self.assertEqual(data, b('[') + b('i\x01') * 1024 + b(']'))
 
     def test_encode_set(self):
         data = self.encode(set(['foo', 'bar', 'baz', 'foo']))
-        self.assertEqual(data, b('ASi\x03bazSi\x03fooSi\x03barE'))
+        self.assertEqual(data, b('[Si\x03bazSi\x03fooSi\x03bar]'))
 
     def test_encode_frozenset(self):
         data = self.encode(frozenset(['foo', 'bar', 'baz', 'foo']))
-        self.assertEqual(data, b('ASi\x03bazSi\x03fooSi\x03barE'))
+        self.assertEqual(data, b('[Si\x03bazSi\x03fooSi\x03bar]'))
 
 
 class StreamTestCase(Draft9TestCase):
 
     def test_decode_unsized_array(self):
-        data = self.decode(b('Ai\x01i\x02i\x03E'))
+        data = self.decode(b('[i\x01i\x02i\x03]'))
         self.assertTrue(isinstance(data, GeneratorType))
         self.assertEqual(list(data), [1, 2, 3])
 
     def test_encode_generator(self):
         data = self.encode((i for i in range(7)))
-        self.assertEqual(data, b('Ai\x00i\x01i\x02i\x03i\x04i\x05i\x06E'))
+        self.assertEqual(data, b('[i\x00i\x01i\x02i\x03i\x04i\x05i\x06]'))
 
     def test_decode_unsized_object(self):
-        data = self.decode(b('OSi\x03fooSi\x03barSi\x03barSi\x03bazE'))
+        data = self.decode(b('{Si\x03fooSi\x03barSi\x03barSi\x03baz}'))
         self.assertTrue(isinstance(data, GeneratorType))
         self.assertEqual(dict(data), {'foo': 'bar', 'bar': 'baz'})
 
     def test_decode_unsized_array_with_noops(self):
-        data = self.decode(b('ANi\x01NNNi\x02NNNNNNNNNNNNNi\x03E'))
+        data = self.decode(b('[Ni\x01NNNi\x02NNNNNNNNNNNNNi\x03]'))
         self.assertTrue(isinstance(data, GeneratorType))
         self.assertEqual(list(data), [1, 2, 3])
 
     def test_decode_nested_unsized_values(self):
-        data = self.decode(b('AAi\x2aEOSi\x03fooi\x2aEE'))
+        data = self.decode(b('[[i\x2a]{Si\x03fooi\x2a}]'))
         self.assertTrue(isinstance(data, GeneratorType))
         item = data.next()
         self.assertTrue(isinstance(item, list))
@@ -365,55 +365,50 @@ class StreamTestCase(Draft9TestCase):
         self.assertTrue(isinstance(item, list))
         self.assertEqual(item, [(b('foo'), 42)])
 
-    def test_decode_nested_unsized_values(self):
-        data = self.decode(b('AAi\x2aEOSi\x03fooi\x2aEE'))
-        result = list(data)
-        self.assertEqual(result, [[42], [('foo', 42)]])
-
     def test_encode_xrange(self):
         data = self.encode(xrange(4))
-        self.assertEqual(data, b('Ai\x00i\x01i\x02i\x03E'))
+        self.assertEqual(data, b('[i\x00i\x01i\x02i\x03]'))
 
     def test_encode_dict_iterkeys(self):
         data = {'foo': 0, 'bar': 1, 'baz': 2}
         data = self.encode(getattr(data, 'iterkeys', data.keys)())
-        self.assertEqual(data, b('ASi\x03bazSi\x03fooSi\x03barE'))
+        self.assertEqual(data, b('[Si\x03bazSi\x03fooSi\x03bar]'))
 
     def test_encode_dict_itervalues(self):
         data = {'foo': 0, 'bar': 1, 'baz': 2}
         data = self.encode(getattr(data, 'itervalues', data.values)())
-        self.assertEqual(data, b('Ai\x02i\x00i\x01E'))
+        self.assertEqual(data, b('[i\x02i\x00i\x01]'))
 
     def test_encode_dict_iteritems(self):
         data = {'foo': 0, 'bar': 1, 'baz': 2}
         data = self.encode(getattr(data, 'iteritems', data.items)())
         self.assertEqual(
             data,
-            b('OSi\x03bazi\x02Si\x03fooi\x00Si\x03bari\x01E')
+            b('{Si\x03bazi\x02Si\x03fooi\x00Si\x03bari\x01}')
         )
 
     def test_fail_decode_on_early_array_end(self):
-        self.assertRaises(ValueError, list, self.decode(b('A')))
+        self.assertRaises(ValueError, list, self.decode(b('[')))
 
     def test_fail_decode_on_early_object_end(self):
-        self.assertRaises(ValueError, list, self.decode(b('O')))
+        self.assertRaises(ValueError, list, self.decode(b('{')))
 
     def test_fail_decode_on_early_eos(self):
-        data = self.decode(b('OSi\x03fooE'))
+        data = self.decode(b('{Si\x03foo}'))
         self.assertRaises(ValueError, list, data)
 
     def test_fail_decode_object_with_nonstring_key(self):
-        data = self.decode(b('Oi\x03Si\x03fooE'))
+        data = self.decode(b('{i\x03Si\x03foo}'))
         self.assertRaises(ValueError, list, data)
 
     def test_allow_emit_noop_for_arrays(self):
-        data = self.decode(b('Ai\x00Ni\x01Ni\x02Ni\x03Ni\x04E'),
+        data = self.decode(b('[i\x00Ni\x01Ni\x02Ni\x03Ni\x04]'),
                                    allow_noop=True)
         N = simpleubjson.NOOP
         self.assertEqual(list(data), [0, N, 1, N, 2, N, 3, N, 4])
 
     def test_allow_emit_noop_for_objects(self):
-        data = self.decode(b('ONSi\x03fooNSi\x03barNE'),
+        data = self.decode(b('{NSi\x03fooNSi\x03barN}'),
                                    allow_noop=True)
         self.assertTrue(isinstance(data, GeneratorType))
         data = list(data)
@@ -421,7 +416,7 @@ class StreamTestCase(Draft9TestCase):
         self.assertEqual(data, [(N, N), ('foo', 'bar'), (N, N)])
         self.assertEqual(dict(data), {'foo': 'bar', N: N})
 
-        data = self.decode(b('Ai\x00Ni\x01Ni\x02Ni\x03Ni\x04E'),
+        data = self.decode(b('[i\x00Ni\x01Ni\x02Ni\x03Ni\x04]'),
                                    allow_noop=True)
         N = simpleubjson.NOOP
         self.assertEqual(list(data), [0, N, 1, N, 2, N, 3, N, 4])
@@ -430,33 +425,29 @@ class StreamTestCase(Draft9TestCase):
 class ObjectTestCase(Draft9TestCase):
 
     def test_decode_object(self):
-        data = dict(self.decode(b('OSi\x03fooSi\x03barSi\x03barSi\x03bazE')))
+        data = dict(self.decode(b('{Si\x03fooSi\x03barSi\x03barSi\x03baz}')))
         self.assertEqual(data, {'foo': 'bar', 'bar': 'baz'})
 
     def test_encode_object(self):
         data = self.encode({'foo': 'bar', 'bar': 'baz'})
-        self.assertEqual(data, b('OSi\x03fooSi\x03barSi\x03barSi\x03bazE'))
+        self.assertEqual(data, b('{Si\x03fooSi\x03barSi\x03barSi\x03baz}'))
 
     def test_decode_object_with_nested_unsized_objects(self):
-        source = b('OSi\x03barAi\x2aESi\x03bazONNNSi\x03fooi\x2aEE')
+        source = b('{Si\x03bar[i\x2a]Si\x03baz{NNNSi\x03fooi\x2a}}')
         data = dict(self.decode(source))
         self.assertEqual(data, {'baz': [('foo', 42)], 'bar': [42]})
 
-    def test_fail_decode_if_eos_marker_occurres_in_sized_object(self):
-        data = b('o\x02Si\x03fooSi\x03barSi\x03barESi\x03baz')
-        self.assertRaises(ValueError, self.decode, data)
-
     def test_should_skip_noop_markers_in_sized_object(self):
-        data = dict(self.decode(b('OSi\x03fooSi\x03barNNNSi\x03barSi\x03bazE')))
+        data = dict(self.decode(b('{Si\x03fooSi\x03barNNNSi\x03barSi\x03baz}')))
         self.assertEqual(data, {'foo': 'bar', 'bar': 'baz'})
 
     def test_fail_decode_non_string_object_keys(self):
         self.assertRaises(ValueError,
                           list,
-                          self.decode(b('Oi\x03Si\x03barE')))
+                          self.decode(b('{i\x03Si\x03bar}')))
 
     def test_fail_decode_on_early_end(self):
-        self.assertRaises(ValueError, list, self.decode(b('Oi\x01')))
+        self.assertRaises(ValueError, list, self.decode(b('{i\x01')))
 
 
 if __name__ == '__main__':
