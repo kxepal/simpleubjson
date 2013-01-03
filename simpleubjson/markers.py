@@ -16,9 +16,9 @@ from simpleubjson.compat import b, basestring, unicode, xrange
 
 
 class Marker(object):
-    
+    """Base marker class."""
     __slots__ = ()
-    
+
     tag = None
     _btag = None
     length = None
@@ -340,7 +340,16 @@ class HighDefinitionMarker(HugeMarker):
         return self._btag, length, value
 
 
-class ArrayMarker(Marker):
+class ContainerMarker(Marker):
+
+    __slots__ = ()
+
+
+class UnsizedContainer(object):
+    pass
+
+
+class ArrayMarker(ContainerMarker):
 
     __slots__ = ()
 
@@ -390,7 +399,7 @@ class LongArrayMarker(SizedArrayMarker):
     length = '>I'
 
 
-class UnsizedArrayMarker(ArrayMarker):
+class UnsizedArrayMarker(ArrayMarker, UnsizedContainer):
 
     __slots__ = ()
 
@@ -432,7 +441,7 @@ class JsonLikeUnsizedArrayMarker(UnsizedArrayMarker):
         return chain([self._btag], value, [encode(self.eos)])
 
 
-class ObjectMarker(Marker):
+class ObjectMarker(ContainerMarker):
 
     __slots__ = ()
 
@@ -497,7 +506,7 @@ class LongObjectMarker(SizedObjectMarker):
     length = '>I'
 
 
-class UnsizedObjectMarker(ObjectMarker):
+class UnsizedObjectMarker(ObjectMarker, UnsizedContainer):
 
     __slots__ = ()
 
