@@ -28,16 +28,10 @@ _draft8_encoder = Draft8Encoder()
 _draft9_decoder = Draft9Decoder()
 _draft9_encoder = Draft9Encoder()
 
-def decode(data, default=None, allow_noop=False, spec='draft8'):
+def decode(data, allow_noop=False, spec='draft8'):
     """Decodes input stream of UBJSON data to Python object.
 
     :param data: `.read([size])`-able object or source string.
-    :param default: Callable object that would be used if there is no handlers
-                    matched for occurred marker.
-                    Takes three arguments: data stream, markers collection
-                    and received tag value.
-                    It should return tuple of two values: Marker instance and
-                    TLV tuple.
     :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
     :type allow_noop: bool
@@ -57,10 +51,10 @@ def decode(data, default=None, allow_noop=False, spec='draft8'):
     """
 
     if spec.lower() in ['draft8', 'draft-8']:
-        stream = streamify(data, _draft8_decoder.markers, default, allow_noop)
+        stream = streamify(data, _draft8_decoder.markers, allow_noop)
         return _draft8_decoder(stream)
     elif spec.lower() in ['draft9', 'draft-9']:
-        stream = streamify(data, _draft9_decoder.markers, default, allow_noop)
+        stream = streamify(data, _draft9_decoder.markers, allow_noop)
         return _draft9_decoder(stream)
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)

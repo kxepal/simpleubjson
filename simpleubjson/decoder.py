@@ -12,72 +12,66 @@ from simpleubjson.markers import (
     DRAFT8_MARKERS, DRAFT9_MARKERS,
     NumericMarker, StreamedArrayMarker, StreamedObjectMarker
 )
-from simpleubjson.compat import BytesIO, bytes, unicode
+from simpleubjson.compat import BytesIO, b, bytes, unicode
 import sys
 version = '.'.join(map(str, sys.version_info[:2]))
 
 __all__ = ['Decoder', 'Draft8Decoder', 'Draft9Decoder', 'streamify']
 
 
-def streamify(source, markers, default=None, allow_noop=False):
-    """Wraps source data into stream that emits data in TLV-format.
+def streamify(source, markers, allow_noop=False):
+    """Wraps source data into stream that emits data as :class:`Marker` instance
+    with TLV-tuple description.
 
     :param source: `.read([size])`-able object or string with ubjson data.
-    :param markers: Key-value set of rules for :func:`struck.unpack` function.
+
+    :param markers: Mapping of supported markers where key is a `tag` byte and
+                    value is a related :class:`Marker` instance.
     :type markers: dict
-    :param default: Callable object that would be used if there is no handlers
-                    matched for occurred marker.
-                    Takes two arguments: data stream and marker.
-                    It should return tuple of three values: marker, size and
-                    result value.
+
     :param allow_noop: Allow to emit :const:`~simpleubjson.NOOP` values for
                        unsized arrays and objects.
     :type allow_noop: bool
 
-    :return: Generator of (type, length, value) data set.
+    :yield: :class:`Marker` and (`tag`, `length`, `value`) tuple.
     """
-    if isinstance(source, unicode):
-        source = BytesIO(source.encode('utf-8'))
-    elif isinstance(source, bytes):
-        source = BytesIO(source)
-    assert hasattr(source, 'read'), 'data source should be `.read([size])`-able'
-    read = source.read
-    _unpack = struct.unpack
+    _NOOP=b('N')
+    _isinstance = isinstance
+    _size_marker = NumericMarker
     _calc = struct.calcsize
-    size_marker = NumericMarker
-    while True:
+    _unpack = struct.unpack
+    if _isinstance(source, unicode):
+        source = source.encode('utf-8')
+    if _isinstance(source, bytes):
+        source = BytesIO(source)
+    read = source.read
+    while 1:
         tag = read(1)
         if not tag:
             break
-        if version >= '3.0':
-            tag = tag.decode('utf-8')
-        if not allow_noop and tag == 'N':
+        if not allow_noop and tag == _NOOP:
             continue
-        if tag not in markers:
-            if default is None:
-                raise ValueError('Unknown marker %r' % tag)
-            yield default(source, markers, tag)
-            continue
-        marker = markers[tag]
+        marker = markers.get(tag)
+        if marker is None:
+            raise ValueError('Unknown marker %r' % tag)
         length = marker.length
         value = marker.value
         if length is not None:
-            if length is size_marker:
+            if length is _size_marker:
                 stag = read(1)
                 if not stag:
-                    break
-                if version >= '3.0':
-                    stag = stag.decode('utf-8')
-                if stag not in markers:
-                    raise ValueError('Unknown size marker %r' % stag)
-                smarker = markers[stag]
-                if not isinstance(smarker, size_marker):
-                    raise ValueError('Invalid size marker %r' % stag)
+                    raise ValueError('Unexpectable end of stream')
+                smarker = markers.get(stag)
+                if smarker is None:
+                    raise ValueError('Unknown marker %r' % stag)
+                if not _isinstance(smarker, _size_marker):
+                    raise ValueError('Invalid size marker %r' % smarker.tag)
                 length = smarker.value
             length = _unpack(length, read(_calc(length)))[0]
         if value is not None:
             if length is not None:
-                assert length >= 0, 'Negative size for marker %r' % tag
+                if length < 0:
+                    raise ValueError('Negative size for marker %r' % tag)
                 if '%' in value:
                     value = value % length
             value = _unpack(value, read(_calc(value)))[0]
@@ -162,13 +156,13 @@ class Draft8Decoder(Decoder):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    _markers = dict((marker.tag, marker) for marker in DRAFT8_MARKERS)
+    _markers = dict((marker._btag, marker) for marker in DRAFT8_MARKERS)
 
     def decode_tlv(self, stream, marker, tlv):
         tag, length, value = tlv
-        if tag == 'a' and length == 255:
+        if tag == b('a') and length == 255:
             return StreamedArrayMarker().decode(self, stream, tlv)
-        if tag == 'o' and length == 255:
+        if tag == b('o') and length == 255:
             return StreamedObjectMarker().decode(self, stream, tlv)
         return marker.decode(self, stream, tlv)
 
@@ -222,4 +216,4 @@ class Draft9Decoder(Decoder):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    _markers = dict((marker.tag, marker) for marker in DRAFT9_MARKERS)
+    _markers = dict((marker._btag, marker) for marker in DRAFT9_MARKERS)
