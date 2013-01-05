@@ -156,7 +156,7 @@ class Draft8Decoder(Decoder):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    _markers = dict((marker._btag, marker) for marker in DRAFT8_MARKERS)
+    _markers = dict((marker.tag, marker) for marker in DRAFT8_MARKERS)
 
     def decode_tlv(self, stream, marker, tlv):
         tag, length, value = tlv
@@ -216,4 +216,4 @@ class Draft9Decoder(Decoder):
         Unsized objects are represented as list of 2-element tuples with object
         key and value.
     """
-    _markers = dict((marker._btag, marker) for marker in DRAFT9_MARKERS)
+    _markers = dict((marker.tag, marker) for marker in DRAFT9_MARKERS)

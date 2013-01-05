@@ -20,7 +20,6 @@ class Marker(object):
     __slots__ = ()
 
     tag = None
-    _btag = None
     length = None
     value = None
     eos = None
@@ -36,28 +35,26 @@ class NoopMarker(Marker):
 
     __slots__ = ()
 
-    tag = 'N'
-    _btag = b(tag)
+    tag = b('N')
 
     def decode(self, decoder, stream, tlv):
         return NOOP
 
     def encode(self, encode, obj):
-        return [self._btag]
+        return [self.tag]
 
 
 class EndOfStreamMarker(Marker):
 
     __slots__ = ()
 
-    tag = 'E'
-    _btag = b(tag)
+    tag = b('E')
 
     def decode(self, decoder, stream, tlv):
         return EOS
 
     def encode(self, encode, obj):
-        return [self._btag]
+        return [self.tag]
 
 
 class EndOfArrayStreamMarker(EndOfStreamMarker):
@@ -65,7 +62,6 @@ class EndOfArrayStreamMarker(EndOfStreamMarker):
     __slots__ = ()
 
     tag = ']'
-    _btag = b(tag)
 
     def decode(self, decoder, stream, tlv):
         return EOS_A
@@ -76,7 +72,6 @@ class EndOfObjectStreamMarker(EndOfStreamMarker):
     __slots__ = ()
 
     tag = '}'
-    _btag = b(tag)
 
     def decode(self, decoder, stream, tlv):
         return EOS_O
@@ -86,14 +81,13 @@ class NullMarker(Marker):
 
     __slots__ = ()
 
-    tag = 'Z'
-    _btag = b(tag)
+    tag = b('Z')
 
     def decode(self, decoder, stream, tlv):
         return None
 
     def encode(self, encode, obj):
-        return [self._btag]
+        return [self.tag]
 
 
 class BooleanMarker(Marker):
@@ -101,15 +95,14 @@ class BooleanMarker(Marker):
     __slots__ = ()
 
     def encode(self, encode, obj):
-        return [self._btag]
+        return [self.tag]
 
 
 class FalseMarker(BooleanMarker):
 
     __slots__ = ()
 
-    tag = 'F'
-    _btag = b(tag)
+    tag = b('F')
 
     def decode(self, decoder, stream, tlv):
         return False
@@ -119,8 +112,7 @@ class TrueMarker(BooleanMarker):
 
     __slots__ = ()
 
-    tag = 'T'
-    _btag = b(tag)
+    tag = b('T')
 
     def decode(self, decoder, stream, tlv):
         return True
@@ -134,7 +126,7 @@ class NumericMarker(Marker):
         return tlv[2]
 
     def encode(self, encode, obj):
-        return self._btag, pack(self.value, obj)
+        return self.tag, pack(self.value, obj)
 
 
 class IntegerMarker(NumericMarker):
@@ -146,8 +138,7 @@ class ByteMarker(IntegerMarker):
 
     __slots__ = ()
 
-    tag = 'B'
-    _btag = b(tag)
+    tag = b('B')
     value = '>b'
 
 
@@ -155,8 +146,7 @@ class ShortIntMarker(IntegerMarker):
 
     __slots__ = ()
 
-    tag = 'i'
-    _btag = b(tag)
+    tag = b('i')
     value = '>h'
 
 
@@ -164,8 +154,7 @@ class IntMarker(IntegerMarker):
 
     __slots__ = ()
 
-    tag = 'I'
-    _btag = b(tag)
+    tag = b('I')
     value = '>i'
 
 
@@ -173,8 +162,7 @@ class LongIntMarker(IntegerMarker):
 
     __slots__ = ()
 
-    tag = 'L'
-    _btag = b(tag)
+    tag = b('L')
     value = '>q'
 
 
@@ -182,40 +170,35 @@ class Int8Marker(ByteMarker):
 
     __slots__ = ()
 
-    tag = 'i'
-    _btag = b(tag)
+    tag = b('i')
 
 
 class Int16Marker(ShortIntMarker):
 
     __slots__ = ()
 
-    tag = 'I'
-    _btag = b(tag)
+    tag = b('I')
 
 
 class Int32Marker(IntMarker):
 
     __slots__ = ()
 
-    tag = 'l'
-    _btag = b(tag)
+    tag = b('l')
 
 
 class Int64Marker(LongIntMarker):
 
     __slots__ = ()
 
-    tag = 'L'
-    _btag = b(tag)
+    tag = b('L')
 
 
 class FloatMarker(NumericMarker):
 
     __slots__ = ()
 
-    tag = 'd'
-    _btag = b(tag)
+    tag = b('d')
     value = '>f'
 
 
@@ -223,8 +206,7 @@ class DoubleMarker(FloatMarker):
 
     __slots__ = ()
 
-    tag = 'D'
-    _btag = b(tag)
+    tag = b('D')
     value = '>d'
 
 
@@ -241,15 +223,14 @@ class TextMarker(Marker):
         size = len(obj)
         length = pack(self.length, size)
         value = pack(self.value % size, obj)
-        return self._btag, length, value
+        return self.tag, length, value
 
 
 class ShortStringMarker(TextMarker):
 
     __slots__ = ()
 
-    tag = 's'
-    _btag = b(tag)
+    tag = b('s')
     length = '>B'
     value = '>%ds'
 
@@ -258,8 +239,7 @@ class LongStringMarker(TextMarker):
 
     __slots__ = ()
 
-    tag = 'S'
-    _btag = b(tag)
+    tag = b('S')
     length = '>I'
     value = '>%ds'
 
@@ -268,8 +248,7 @@ class StringMarker(TextMarker):
 
     __slots__ = ()
 
-    tag = 'S'
-    _btag = b(tag)
+    tag = b('S')
     length = NumericMarker
     value = '>%ds'
 
@@ -279,7 +258,7 @@ class StringMarker(TextMarker):
         size = len(obj)
         length = encode(size)
         value = pack(self.value % size, obj)
-        return self._btag, length, value
+        return self.tag, length, value
 
 
 class HugeMarker(Marker):
@@ -297,15 +276,14 @@ class HugeMarker(Marker):
         size = len(obj)
         length = pack(self.length, size)
         value = pack(self.value % size, obj)
-        return self._btag, length, value
+        return self.tag, length, value
 
 
 class ShortHugeMarker(HugeMarker):
 
     __slots__ = ()
 
-    tag = 'h'
-    _btag = b(tag)
+    tag = b('h')
     length = '>B'
     value = '>%ds'
 
@@ -314,8 +292,7 @@ class LongHugeMarker(HugeMarker):
 
     __slots__ = ()
 
-    tag = 'H'
-    _btag = b(tag)
+    tag = b('H')
     length = '>I'
     value = '>%ds'
 
@@ -324,8 +301,7 @@ class HighDefinitionMarker(HugeMarker):
 
     __slots__ = ()
 
-    tag = 'H'
-    _btag = b(tag)
+    tag = b('H')
     length = NumericMarker
     value = '>%ds'
 
@@ -337,7 +313,7 @@ class HighDefinitionMarker(HugeMarker):
         size = len(obj)
         length = encode(size)
         value = pack(self.value % size, obj)
-        return self._btag, length, value
+        return self.tag, length, value
 
 
 class ContainerMarker(Marker):
@@ -378,15 +354,14 @@ class SizedArrayMarker(ArrayMarker):
         size = len(obj)
         length = pack(self.length, size)
         value = (encode(item) for item in obj)
-        return chain([self._btag, length], value)
+        return chain([self.tag, length], value)
 
 
 class ShortArrayMarker(SizedArrayMarker):
 
     __slots__ = ()
 
-    tag = 'a'
-    _btag = b(tag)
+    tag = b('a')
     length = '>B'
 
 
@@ -394,8 +369,7 @@ class LongArrayMarker(SizedArrayMarker):
 
     __slots__ = ()
 
-    tag = 'A'
-    _btag = b(tag)
+    tag = b('A')
     length = '>I'
 
 
@@ -420,25 +394,23 @@ class StreamedArrayMarker(UnsizedArrayMarker):
 
     __slots__ = ()
 
-    tag = 'a'
-    _btag = b(tag)
+    tag = b('a')
 
     def encode(self, encode, obj):
         value = (encode(item) for item in obj)
-        return chain([self._btag, b('\xff')], value, [encode(self.eos)])
+        return chain([self.tag, b('\xff')], value, [encode(self.eos)])
 
 
 class JsonLikeUnsizedArrayMarker(UnsizedArrayMarker):
 
     __slots__ = ()
 
-    tag = '['
-    _btag = b(tag)
+    tag = b('[')
     eos = EOS_A
 
     def encode(self, encode, obj):
         value = (encode(item) for item in obj)
-        return chain([self._btag], value, [encode(self.eos)])
+        return chain([self.tag], value, [encode(self.eos)])
 
 
 class ObjectMarker(ContainerMarker):
@@ -485,15 +457,14 @@ class SizedObjectMarker(ObjectMarker):
     def encode(self, encode, obj):
         length = pack(self.length, len(obj))
         value = super(SizedObjectMarker, self).encode(encode, obj)
-        return chain([self._btag, length], value)
+        return chain([self.tag, length], value)
 
 
 class ShortObjectMarker(SizedObjectMarker):
 
     __slots__ = ()
 
-    tag = 'o'
-    _btag = b(tag)
+    tag = b('o')
     length = '>B'
 
 
@@ -501,8 +472,7 @@ class LongObjectMarker(SizedObjectMarker):
 
     __slots__ = ()
 
-    tag = 'O'
-    _btag = b(tag)
+    tag = b('O')
     length = '>I'
 
 
@@ -539,26 +509,24 @@ class StreamedObjectMarker(UnsizedObjectMarker):
 
     __slots__ = ()
 
-    tag = 'o'
-    _btag = b(tag)
+    tag = b('o')
     eos = EOS
 
     def encode(self, encode, obj):
         value = super(StreamedObjectMarker, self).encode(encode, obj)
-        return chain([self._btag, b('\xff')], value, [encode(self.eos)])
+        return chain([self.tag, b('\xff')], value, [encode(self.eos)])
 
 
 class JsonLikeUnsizedObjectMarker(UnsizedObjectMarker):
 
     __slots__ = ()
 
-    tag = '{'
-    _btag = b(tag)
+    tag = b('{')
     eos = EOS_O
 
     def encode(self, encode, obj):
         value = super(JsonLikeUnsizedObjectMarker, self).encode(encode, obj)
-        return chain([self._btag], value, [encode(self.eos)])
+        return chain([self.tag], value, [encode(self.eos)])
 
 
 DRAFT8_MARKERS = [
