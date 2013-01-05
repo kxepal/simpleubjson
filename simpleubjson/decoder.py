@@ -13,8 +13,6 @@ from simpleubjson.markers import (
     NumericMarker, StreamedArrayMarker, StreamedObjectMarker
 )
 from simpleubjson.compat import BytesIO, b, bytes, unicode
-import sys
-version = '.'.join(map(str, sys.version_info[:2]))
 
 __all__ = ['Decoder', 'Draft8Decoder', 'Draft9Decoder', 'streamify']
 
