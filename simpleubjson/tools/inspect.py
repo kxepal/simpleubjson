@@ -9,7 +9,10 @@
 
 import sys
 import simpleubjson
-from simpleubjson.decoder import streamify, Draft8Decoder, Draft9Decoder
+from simpleubjson.common import streamify
+from simpleubjson.draft8 import Draft8Decoder
+from simpleubjson.draft9 import Draft9Decoder
+
 
 def pprint(data, output=sys.stdout, allow_noop=True,
            indent='    ', max_level=None, spec='draft-8'):

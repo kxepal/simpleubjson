@@ -16,8 +16,9 @@ EOS_A = type('EndOfArrayStream', (_EOS,), {'__slots__': ()})()
 EOS_O = type('EndOfObjectStream', (_EOS,), {'__slots__': ()})()
 del _EOS
 
-from simpleubjson.decoder import streamify, Draft8Decoder, Draft9Decoder
-from simpleubjson.encoder import Draft8Encoder, Draft9Encoder
+from simpleubjson.common import streamify
+from simpleubjson.draft8 import Draft8Decoder, Draft8Encoder
+from simpleubjson.draft9 import Draft9Decoder, Draft9Encoder
 from simpleubjson.tools.inspect import pprint
 
 __all__ = ['decode', 'encode', 'pprint', 'NOOP', 'EOS']
