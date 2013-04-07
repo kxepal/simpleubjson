@@ -100,18 +100,15 @@ class Draft9Decoder(object):
     """
     dispatch = {}
 
-    def __init__(self, source, allow_noop=False, stream=False):
+    def __init__(self, source, allow_noop=False):
         if isinstance(source, unicode):
             source = source.encode('utf-8')
         if isinstance(source, bytes):
             source = BytesIO(source)
         self.index = []
-        self.stack = []
         self.read = source.read
-        self.emit = self.stack.append
         self.allow_noop = allow_noop
         self.dispatch = self.dispatch.copy()
-        self.streaming = stream
 
     def __iter__(self):
         return self
@@ -170,31 +167,9 @@ class Draft9Decoder(object):
 
     def decode_next(self):
         tag, length, value = self.next_tlv()
-        value = self.dispatch[tag](self, tag, length, value)
-        if self.stack:
-            return self.stack.pop()
-        return value
+        return self.dispatch[tag](self, tag, length, value)
 
     __next__ = next = decode_next
-
-    def stream(self, root_container):
-        stash = []
-        while 1:
-            value = self.decode_next()
-            if not (self.stack or self.index):
-                pass
-            if not value:
-                assert len(self.stack) == 1
-                value = self.stack.pop()
-                if root_container == BOS_O:
-                    stash.append(value)
-                    if len(stash) == 2:
-                        yield tuple(stash)
-                        stash = []
-                else:
-                    yield value
-            elif not self.index:
-                break
 
     def decode_noop(self, tag, length, value):
         return NOOP_SENTINEL
@@ -233,21 +208,21 @@ class Draft9Decoder(object):
     dispatch[HIDEF] = decode_hidef
 
     def decode_array_open(self, tag, length, value):
-        self.index.append((BOS_A, len(self.stack)))
+        self.index.append(BOS_A)
     dispatch[ARRAY_OPEN] = decode_array_open
 
     def decode_object_open(self, tag, length, value):
-        self.index.append((BOS_O, len(self.stack)))
+        self.index.append(BOS_O)
     dispatch[OBJECT_OPEN] = decode_object_open
 
     def decode_array(self, tag, length, value):
-        if self.streaming and not self.index:
+        if not self.index:
             raise StopIteration
         raise EarlyEndOfStreamError
     dispatch[ARRAY_CLOSE] = decode_array
 
     def decode_object(self, tag, length, value):
-        if self.streaming and not self.index:
+        if not self.index:
             raise StopIteration
         raise EarlyEndOfStreamError
     dispatch[OBJECT_CLOSE] = decode_object
