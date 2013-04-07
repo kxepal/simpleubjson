@@ -57,101 +57,101 @@ def run_test(func, times, *args, **kwargs):
 
 def make_benchmark(name, count):
     data = load_case(name)
-
-    src = simpleubjson.encode(data, spec='draft-8')
-    total = run_test(simpleubjson.decode, count, src, spec='draft-8')
-    print format_results('simpleubjson',  '0.6-dev',
-                         'Decoded Draft-8', total, count)
-
-    total = run_test(simpleubjson.encode, count, data, spec='draft-8')
-    print format_results('simpleubjson',  '0.6-dev',
-                         'Encoded Draft-8', total, count)
-
-    print
+    #
+    # src = simpleubjson.encode(data, spec='draft-8')
+    # total = run_test(simpleubjson.decode, count, src, spec='draft-8')
+    # print format_results('simpleubjson',  '0.6-dev',
+    #                      'Decoded Draft-8', total, count)
+    #
+    # total = run_test(simpleubjson.encode, count, data, spec='draft-8')
+    # print format_results('simpleubjson',  '0.6-dev',
+    #                      'Encoded Draft-8', total, count)
+    #
+    # print
 
     src = simpleubjson.encode(data, spec='draft-9')
     func = lambda *a, **k: list(simpleubjson.decode(*a, **k))
     total = run_test(func, count, src, spec='draft-9')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  '0.6-issue.6',
                          'Decoded Draft-9', total, count)
 
     src = data
     func = lambda *a, **k: list(simpleubjson.encode(*a, **k))
     total = run_test(func, count, src, spec='draft-9')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  'issue.6',
                          'Encoded Draft-9', total, count)
-
-    if json:
-
-        print
-
-        total = run_test(json.loads, count, json.dumps(data))
-        print format_results('json_stdlib', json.__version__,
-                             'Decoded', total, count)
-
-        total = run_test(json.dumps, count, data)
-        print format_results('json_stdlib', json.__version__,
-                             'Encoded', total, count)
-
-    if simplejson:
-
-        print
-
-        simplejson._toggle_speedups(True)
-        total = run_test(simplejson.loads, count, simplejson.dumps(data))
-        print format_results('simplejson_c', simplejson.__version__,
-                             'Decoded', total, count)
-
-        simplejson._toggle_speedups(True)
-        total = run_test(simplejson.dumps, count, data)
-        print format_results('simplejson_c', simplejson.__version__,
-                             'Encoded', total, count)
-
-        print
-
-        simplejson._toggle_speedups(False)
-        total = run_test(simplejson.loads, count, simplejson.dumps(data))
-        print format_results('simplejson_py', simplejson.__version__,
-                             'Decoded', total, count)
-
-        simplejson._toggle_speedups(False)
-        total = run_test(simplejson.dumps, count, data)
-        print format_results('simplejson_py', simplejson.__version__,
-                             'Encoded', total, count)
-
-    if ujson:
-
-        print
-
-        total = run_test(ujson.decode, count, ujson.encode(data))
-        print format_results('ujson', ujson.__version__,
-                             'Decoded', total, count)
-
-        total = run_test(ujson.encode, count, data)
-        print format_results('ujson', ujson.__version__,
-                             'Encoded', total, count)
-
-    if erlport:
-
-        print
-
-        total = run_test(erlport.decode, count, erlport.encode(data))
-        print format_results('erlport', erlport.__version__,
-                             'Decoded', total, count)
-
-        total = run_test(erlport.encode, count, data)
-        print format_results('erlport', erlport.__version__,
-                             'Encoded', total, count)
-
-    print
-
-    total = run_test(pickle.loads, count, pickle.dumps(data))
-    print format_results('pickle', pickle.__version__,
-                         'Decoded', total, count)
-
-    total = run_test(pickle.dumps, count, data)
-    print format_results('pickle', pickle.__version__,
-                         'Encoded', total, count)
+    #
+    # if json:
+    #
+    #     print
+    #
+    #     total = run_test(json.loads, count, json.dumps(data))
+    #     print format_results('json_stdlib', json.__version__,
+    #                          'Decoded', total, count)
+    #
+    #     total = run_test(json.dumps, count, data)
+    #     print format_results('json_stdlib', json.__version__,
+    #                          'Encoded', total, count)
+    #
+    # if simplejson:
+    #
+    #     print
+    #
+    #     simplejson._toggle_speedups(True)
+    #     total = run_test(simplejson.loads, count, simplejson.dumps(data))
+    #     print format_results('simplejson_c', simplejson.__version__,
+    #                          'Decoded', total, count)
+    #
+    #     simplejson._toggle_speedups(True)
+    #     total = run_test(simplejson.dumps, count, data)
+    #     print format_results('simplejson_c', simplejson.__version__,
+    #                          'Encoded', total, count)
+    #
+    #     print
+    #
+    #     simplejson._toggle_speedups(False)
+    #     total = run_test(simplejson.loads, count, simplejson.dumps(data))
+    #     print format_results('simplejson_py', simplejson.__version__,
+    #                          'Decoded', total, count)
+    #
+    #     simplejson._toggle_speedups(False)
+    #     total = run_test(simplejson.dumps, count, data)
+    #     print format_results('simplejson_py', simplejson.__version__,
+    #                          'Encoded', total, count)
+    #
+    # if ujson:
+    #
+    #     print
+    #
+    #     total = run_test(ujson.decode, count, ujson.encode(data))
+    #     print format_results('ujson', ujson.__version__,
+    #                          'Decoded', total, count)
+    #
+    #     total = run_test(ujson.encode, count, data)
+    #     print format_results('ujson', ujson.__version__,
+    #                          'Encoded', total, count)
+    #
+    # if erlport:
+    #
+    #     print
+    #
+    #     total = run_test(erlport.decode, count, erlport.encode(data))
+    #     print format_results('erlport', erlport.__version__,
+    #                          'Decoded', total, count)
+    #
+    #     total = run_test(erlport.encode, count, data)
+    #     print format_results('erlport', erlport.__version__,
+    #                          'Encoded', total, count)
+    #
+    # print
+    #
+    # total = run_test(pickle.loads, count, pickle.dumps(data))
+    # print format_results('pickle', pickle.__version__,
+    #                      'Decoded', total, count)
+    #
+    # total = run_test(pickle.dumps, count, data)
+    # print format_results('pickle', pickle.__version__,
+    #                      'Encoded', total, count)
 
 
 def test_1(count):
@@ -196,7 +196,7 @@ def main():
     except getopt.GetoptError:
         print(main.__doc__)
         sys.exit(2)
-    count = 1000
+    count = 100000
     for key, value in opts:
         print(key, value)
         if key in ('-h', '--help'):

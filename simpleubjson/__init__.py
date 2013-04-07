@@ -26,8 +26,9 @@ __all__ = ['decode', 'encode', 'pprint', 'NOOP', 'EOS']
 _draft8_decoder = Draft8Decoder()
 _draft8_encoder = Draft8Encoder()
 
-_draft9_decoder = Draft9Decoder()
-_draft9_encoder = Draft9Encoder()
+_draft9_decoder = Draft9Decoder
+_draft9_encoder = Draft9Encoder
+
 
 def decode(data, allow_noop=False, spec='draft8'):
     """Decodes input stream of UBJSON data to Python object.
@@ -55,10 +56,10 @@ def decode(data, allow_noop=False, spec='draft8'):
         stream = streamify(data, _draft8_decoder.markers, allow_noop)
         return _draft8_decoder(stream)
     elif spec.lower() in ['draft9', 'draft-9']:
-        stream = streamify(data, _draft9_decoder.markers, allow_noop)
-        return _draft9_decoder(stream)
+        return _draft9_decoder(data, allow_noop).decode_next()
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
+
 
 def encode(data, output=None, default=None, spec='draft-8'):
     """Encodes Python object to Universal Binary JSON data.
@@ -83,9 +84,13 @@ def encode(data, output=None, default=None, spec='draft-8'):
         * ValueError if unable to pack Python value to binary form.
     """
     if spec.lower() in ['draft8', 'draft-8']:
-        return _draft8_encoder(data, output, default)
+        return _draft8_encoder(data)
     elif spec.lower() in ['draft9', 'draft-9']:
-        return _draft9_encoder(data, output, default)
+        res = _draft9_encoder(default).encode_next(data)
+        if output:
+            output.write(res)
+        else:
+            return res
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
 
