@@ -359,7 +359,7 @@ class Draft9Encoder(object):
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
-            return INT8 + CHARS[obj]
+            return INT8 + CHARS[obj % 256]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             marker = INT16
             token = '>h'
@@ -411,7 +411,7 @@ class Draft9Encoder(object):
     dispatch[type((i for i in ()))] = encode_sequence
     dispatch[set] = encode_sequence
     dispatch[frozenset] = encode_sequence
-    dispatch[type(xrange)] = encode_sequence
+    dispatch[xrange] = encode_sequence
     dispatch[dict_keysiterator] = encode_sequence
     dispatch[dict_valuesiterator] = encode_sequence
 
