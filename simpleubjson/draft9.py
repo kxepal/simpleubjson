@@ -9,13 +9,12 @@
 
 from decimal import Decimal
 from struct import pack, unpack
-from types import *
 from simpleubjson import NOOP as NOOP_SENTINEL
 from simpleubjson.exceptions import (
     EncodeError, MarkerError, EarlyEndOfStreamError
 )
 from simpleubjson.compat import (
-    BytesIO, b, bytes, unicode,
+    BytesIO, b, bytes, unicode, long, xrange,
     dict_itemsiterator, dict_keysiterator, dict_valuesiterator
 )
 
@@ -341,9 +340,9 @@ class Draft9Encoder(object):
             res = self.dispatch[tobj](self, obj)
         else:
             return self.encode_next(self._default(obj))
-        if isinstance(res, GeneratorType):
-            return bytes().join(res)
-        return res
+        if isinstance(res, bytes):
+            return res
+        return bytes().join(res)
 
     def encode_noop(self, obj):
         return NOOP
@@ -351,15 +350,15 @@ class Draft9Encoder(object):
 
     def encode_none(self, obj):
         return NULL
-    dispatch[NoneType] = encode_none
+    dispatch[type(None)] = encode_none
 
     def encode_bool(self, obj):
-        return [FALSE, TRUE][obj]
-    dispatch[BooleanType] = encode_bool
+        return TRUE if obj else FALSE
+    dispatch[bool] = encode_bool
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
-            return INT8 + chr(obj % 256)
+            return INT8 + b(chr(obj % 256))
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             marker = INT16
             token = '>h'
@@ -372,8 +371,8 @@ class Draft9Encoder(object):
         else:
             return self.encode_decimal(Decimal(obj))
         return marker + pack(token, obj)
-    dispatch[IntType] = encode_int
-    dispatch[LongType] = encode_int
+    dispatch[int] = encode_int
+    dispatch[long] = encode_int
 
     def encode_float(self, obj):
         if 1.18e-38 <= abs(obj) <= 3.4e38:
@@ -387,14 +386,14 @@ class Draft9Encoder(object):
         else:
             return self.encode_decimal(Decimal(obj))
         return marker + pack(token, obj)
-    dispatch[FloatType] = encode_float
+    dispatch[float] = encode_float
 
     def encode_str(self, obj):
         if isinstance(obj, unicode):
             obj = obj.encode('utf-8')
         return STRING + self.encode_int(len(obj)) + obj
-    dispatch[StringType] = encode_str
-    dispatch[UnicodeType] = encode_str
+    dispatch[bytes] = encode_str
+    dispatch[unicode] = encode_str
 
     def encode_decimal(self, obj):
         obj = unicode(obj).encode('utf-8')
@@ -406,12 +405,12 @@ class Draft9Encoder(object):
         for item in obj:
             yield self.encode_next(item)
         yield ARRAY_CLOSE
-    dispatch[TupleType] = encode_sequence
-    dispatch[ListType] = encode_sequence
-    dispatch[GeneratorType] = encode_sequence
+    dispatch[tuple] = encode_sequence
+    dispatch[list] = encode_sequence
+    dispatch[type((i for i in ()))] = encode_sequence
     dispatch[set] = encode_sequence
     dispatch[frozenset] = encode_sequence
-    dispatch[XRangeType] = encode_sequence
+    dispatch[type(xrange)] = encode_sequence
     dispatch[dict_keysiterator] = encode_sequence
     dispatch[dict_valuesiterator] = encode_sequence
 

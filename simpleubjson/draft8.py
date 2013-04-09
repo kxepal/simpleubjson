@@ -9,13 +9,12 @@
 
 from decimal import Decimal
 from struct import pack, unpack
-from types import *
 from simpleubjson import NOOP as NOOP_SENTINEL
 from simpleubjson.exceptions import (
     EncodeError, MarkerError, EarlyEndOfStreamError
 )
 from simpleubjson.compat import (
-    BytesIO, b, bytes, unicode,
+    BytesIO, b, bytes, unicode, basestring, long, xrange,
     dict_itemsiterator, dict_keysiterator, dict_valuesiterator
 )
 
@@ -319,9 +318,9 @@ class Draft8Encoder(object):
             res = self.dispatch[tobj](self, obj)
         else:
             return self.encode_next(self._default(obj))
-        if isinstance(res, GeneratorType):
-            return bytes().join(res)
-        return res
+        if isinstance(res, bytes):
+            return res
+        return bytes().join(res)
 
     def encode_noop(self, obj):
         return NOOP
@@ -329,15 +328,15 @@ class Draft8Encoder(object):
 
     def encode_none(self, obj):
         return NULL
-    dispatch[NoneType] = encode_none
+    dispatch[type(None)] = encode_none
 
     def encode_bool(self, obj):
         return [FALSE, TRUE][obj]
-    dispatch[BooleanType] = encode_bool
+    dispatch[bool] = encode_bool
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
-            return INT8 + chr(obj % 256)
+            return INT8 + b(chr(obj % 256))
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             marker = INT16
             token = '>h'
@@ -350,8 +349,8 @@ class Draft8Encoder(object):
         else:
             return self.encode_decimal(Decimal(obj))
         return marker + pack(token, obj)
-    dispatch[IntType] = encode_int
-    dispatch[LongType] = encode_int
+    dispatch[int] = encode_int
+    dispatch[long] = encode_int
 
     def encode_float(self, obj):
         if 1.18e-38 <= abs(obj) <= 3.4e38:
@@ -365,24 +364,24 @@ class Draft8Encoder(object):
         else:
             return self.encode_decimal(Decimal(obj))
         return marker + pack(token, obj)
-    dispatch[FloatType] = encode_float
+    dispatch[float] = encode_float
 
     def encode_str(self, obj):
         if isinstance(obj, unicode):
             obj = obj.encode('utf-8')
         length = len(obj)
         if length < 255:
-            return STRING_S + chr(length) + obj
+            return STRING_S + b(chr(length)) + obj
         else:
             return STRING_L + INT32 + pack('>i', length) + obj
-    dispatch[StringType] = encode_str
-    dispatch[UnicodeType] = encode_str
+    dispatch[bytes] = encode_str
+    dispatch[unicode] = encode_str
 
     def encode_decimal(self, obj):
         obj = unicode(obj).encode('utf-8')
         length = len(obj)
         if length < 255:
-            return HIDEF_S + chr(length) + obj
+            return HIDEF_S + b(chr(length)) + obj
         else:
             return HIDEF_L + pack('>i', length) + obj
     dispatch[Decimal] = encode_decimal
@@ -391,15 +390,15 @@ class Draft8Encoder(object):
         length = len(obj)
         if length < 255:
             marker = ARRAY_S
-            size = chr(length)
+            size = b(chr(length))
         else:
             marker = ARRAY_L
             size = pack('>I', length)
         yield marker + size
         for item in obj:
             yield self.encode_next(item)
-    dispatch[TupleType] = encode_sequence
-    dispatch[ListType] = encode_sequence
+    dispatch[tuple] = encode_sequence
+    dispatch[list] = encode_sequence
     dispatch[set] = encode_sequence
     dispatch[frozenset] = encode_sequence
 
@@ -407,7 +406,7 @@ class Draft8Encoder(object):
         length = len(obj)
         if length < 255:
             marker = OBJECT_S
-            size = chr(length)
+            size = b(chr(length))
         else:
             marker = OBJECT_L
             size = pack('>I', length)
@@ -418,17 +417,17 @@ class Draft8Encoder(object):
     dispatch[dict] = encode_dict
 
     def encode_generator(self, obj):
-        yield ARRAY_S + chr(255)
+        yield ARRAY_S + b(chr(255))
         for item in obj:
             yield self.encode_next(item)
         yield EOS
-    dispatch[XRangeType] = encode_generator
-    dispatch[GeneratorType] = encode_generator
+    dispatch[type(xrange)] = encode_generator
+    dispatch[type((i for i in ()))] = encode_generator
     dispatch[dict_keysiterator] = encode_generator
     dispatch[dict_valuesiterator] = encode_generator
 
     def encode_dictitems(self, obj):
-        yield OBJECT_S + chr(255)
+        yield OBJECT_S + b(chr(255))
         for key, value in obj:
             if not isinstance(key, basestring):
                 raise EncodeError('invalid object key %r' % key)
