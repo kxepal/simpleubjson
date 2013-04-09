@@ -44,6 +44,7 @@ CONTAINERS = set([ARRAY_OPEN, ARRAY_CLOSE, OBJECT_OPEN, OBJECT_CLOSE])
 NUMBERS = set([INT8, INT16, INT32, INT64, FLOAT, DOUBLE])
 STRINGS = set([STRING, HIDEF])
 
+CHARS = dict((i, b(chr(i))) for i in range(256))
 
 __all__ = ['Draft9Decoder', 'Draft9Encoder']
 
@@ -358,7 +359,7 @@ class Draft9Encoder(object):
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
-            return INT8 + b(chr(obj % 256))
+            return INT8 + CHARS[obj]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             marker = INT16
             token = '>h'

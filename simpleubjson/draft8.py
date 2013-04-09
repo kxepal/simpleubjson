@@ -38,6 +38,7 @@ ARRAY_S = b('a')
 OBJECT_S = b('o')
 ARRAY_L = b('A')
 OBJECT_L = b('O')
+FF = b(chr(255))
 
 BOS_A = object()
 BOS_O = object()
@@ -51,6 +52,7 @@ STREAMS = set([ARRAY_S, OBJECT_S])
 OBJECT_KEYS = set([STRING_S, STRING_L])
 FORBIDDEN = set([NOOP, EOS])
 
+CHARS = dict((i, b(chr(i))) for i in range(256))
 
 __all__ = ['Draft8Decoder', 'Draft8Encoder']
 
@@ -336,7 +338,7 @@ class Draft8Encoder(object):
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
-            return INT8 + b(chr(obj % 256))
+            return INT8 + CHARS[obj]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             marker = INT16
             token = '>h'
@@ -371,7 +373,7 @@ class Draft8Encoder(object):
             obj = obj.encode('utf-8')
         length = len(obj)
         if length < 255:
-            return STRING_S + b(chr(length)) + obj
+            return STRING_S + CHARS[length] + obj
         else:
             return STRING_L + INT32 + pack('>i', length) + obj
     dispatch[bytes] = encode_str
@@ -381,7 +383,7 @@ class Draft8Encoder(object):
         obj = unicode(obj).encode('utf-8')
         length = len(obj)
         if length < 255:
-            return HIDEF_S + b(chr(length)) + obj
+            return HIDEF_S + CHARS[length] + obj
         else:
             return HIDEF_L + pack('>i', length) + obj
     dispatch[Decimal] = encode_decimal
@@ -390,7 +392,7 @@ class Draft8Encoder(object):
         length = len(obj)
         if length < 255:
             marker = ARRAY_S
-            size = b(chr(length))
+            size = CHARS[length]
         else:
             marker = ARRAY_L
             size = pack('>I', length)
@@ -406,7 +408,7 @@ class Draft8Encoder(object):
         length = len(obj)
         if length < 255:
             marker = OBJECT_S
-            size = b(chr(length))
+            size = CHARS[length]
         else:
             marker = OBJECT_L
             size = pack('>I', length)
@@ -417,7 +419,7 @@ class Draft8Encoder(object):
     dispatch[dict] = encode_dict
 
     def encode_generator(self, obj):
-        yield ARRAY_S + b(chr(255))
+        yield ARRAY_S + FF
         for item in obj:
             yield self.encode_next(item)
         yield EOS
@@ -427,7 +429,7 @@ class Draft8Encoder(object):
     dispatch[dict_valuesiterator] = encode_generator
 
     def encode_dictitems(self, obj):
-        yield OBJECT_S + b(chr(255))
+        yield OBJECT_S + FF
         for key, value in obj:
             if not isinstance(key, basestring):
                 raise EncodeError('invalid object key %r' % key)
