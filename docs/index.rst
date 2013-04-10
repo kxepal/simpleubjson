@@ -6,16 +6,29 @@
 Welcome to simpleubjson's documentation!
 ========================================
 
+Public API
+----------
+
 .. automodule:: simpleubjson
   :members:
 
-.. automodule:: simpleubjson.tools.inspect
+Draft 8 implementation
+----------------------
+
+.. warning:: UBJSON Draft 8 specification considered as deprecated in favor of
+   Draft 9.
+
+.. automodule:: simpleubjson.draft8
   :members:
 
-.. automodule:: simpleubjson.decoder
-  :members:
+Draft 9 implementation
+----------------------
 
-.. automodule:: simpleubjson.encoder
+.. seealso::
+
+   `Draft 9 breaking changes <http://ubjson.org/#latest>`_
+
+.. automodule:: simpleubjson.draft9
   :members:
 
 .. toctree::
