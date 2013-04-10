@@ -58,8 +58,8 @@ __all__ = ['Draft8Decoder', 'Draft8Encoder']
 
 
 class Draft8Decoder(object):
-    """Decoder of UBJSON data to Python object that follows Draft 8
-    specification rules with next data mapping:
+    """Decoder of UBJSON data to Python object following Draft 8 specification
+    and using next data mapping:
 
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
@@ -108,14 +108,14 @@ class Draft8Decoder(object):
     Notes:
 
     (1)
-        Noop values are ignored by default if only `allow_noop` argument wasn't
-        passed as ``True``.
+        `NoOp` values are ignored by default if only `allow_noop` argument
+        wasn't passed as ``True``.
 
     (2)
         Nested generators are automatically converted to lists.
 
     (3)
-        Unsized objects are represented as list of 2-element tuples with object
+        Unsized objects are represented as list of 2-element tuple with object
         key and value.
     """
 
@@ -305,7 +305,72 @@ class Draft8Decoder(object):
 
 class Draft8Encoder(object):
     """Encoder of Python objects into UBJSON data following Draft 8
-    specification"""
+    specification rules with next data mapping:
+
+    +-----------------------------+------------------------------------+-------+
+    | Python type                 | UBJSON type                        | Notes |
+    +=====================================+============================+=======+
+    | :const:`~simpleubjson.NOOP` | NoOp                               |       |
+    +-----------------------------+------------------------------------+-------+
+    | :const:`None`               | null                               |       |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`bool`               | :const:`False` => false            |       |
+    |                             | :const:`True`  => true             |       |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`int`,               | `integer` or `huge`                | \(1)  |
+    | :class:`long`               |                                    |       |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`float`              | `float`, `null` or `huge`          | \(2)  |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`str`,               | string                             | \(3)  |
+    | :class:`unicode`            |                                    | \(4)  |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`tuple`,             | sized array                        | \(3)  |
+    | :class:`list`,              |                                    |       |
+    | :class:`set`,               |                                    |       |
+    | :class:`frozenset`,         |                                    |       |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`generator`,         | unsized array                      |       |
+    | :class:`XRange`             |                                    |       |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`dict`               | object                             | \(3)  |
+    |                             |                                    | \(5)  |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`dict_itemsiterator` | unsized object                     | \(5)  |
+    +-----------------------------+------------------------------------+-------+
+    | :class:`decimal.Decimal`    | hidef                              |       |
+    +-----------------------------+------------------------------------+-------+
+
+    Notes:
+
+    (1)
+        Depending on value it may be encoded into various UBJSON types:
+
+            * [-2^7, 2^7): ``int8``
+            * [-2^15, 2^15): ``int16``
+            * [-2^31, 2^31): ``int32``
+            * [-2^63, 2^63): ``int64``
+            * everything bigger/smaller: ``huge``
+
+    (2)
+        Depending on value it may be encoded into various UBJSON types:
+
+            * 1.18e-38 <= abs(value) <= 3.4e38: ``float``
+            * 2.23e-308 <= abs(value) < 1.8e308: ``double``
+            * :const:`inf`, :const:`-inf`: ``null``
+            * everything bigger/smaller: ``huge``
+
+    (3)
+        Depending on object length short or long version of UBJSON type may be
+        produced.
+
+    (4)
+        If string is `unicode` it will be encoded with `utf-8` charset.
+
+    (5)
+        Dict keys should have string type or :exc:`simpleubjson.EncodeError`
+        will be raised.
+    """
 
     dispatch = {}
 

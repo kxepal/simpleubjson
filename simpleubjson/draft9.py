@@ -50,8 +50,8 @@ __all__ = ['Draft9Decoder', 'Draft9Encoder']
 
 
 class Draft9Decoder(object):
-    """Decoder of UBJSON data to Python object that follows Draft 9
-    specification rules with next data mapping:
+    """Decoder of UBJSON data to Python object following Draft 9 specification
+    and using next data mapping:
 
     +--------+----------------------------+----------------------------+-------+
     | Marker | UBJSON type                | Python type                | Notes |
@@ -76,26 +76,26 @@ class Draft9Decoder(object):
     +--------+----------------------------+----------------------------+-------+
     | ``D``  | double                     | float                      |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``H``  | hugeint - sized            | decimal.Decimal            |       |
+    | ``H``  | hidef                      | decimal.Decimal            |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``S``  | string - sized             | unicode                    |       |
+    | ``S``  | string                     | unicode                    |       |
     +--------+----------------------------+----------------------------+-------+
-    | ``[``  | array - unsized            | generator                  | \(2)  |
+    | ``[``  | array                      | generator                  | \(2)  |
     +--------+----------------------------+----------------------------+-------+
-    | ``{``  | object - unsized           | generator                  | \(3)  |
+    | ``{``  | object                     | generator                  | \(3)  |
     +--------+----------------------------+----------------------------+-------+
 
     Notes:
 
     (1)
-        Noop values are ignored by default if only `allow_noop` argument wasn't
-        passed as ``True`` to :func:`~simpleubjson.decoder.streamify` wrapper.
+        `NoOp` values are ignored by default if only `allow_noop` argument
+        wasn't passed as ``True``.
 
     (2)
-        Nested generators are automatically converted to lists.
+        Nested generators are automatically converted into lists.
 
     (3)
-        Unsized objects are represented as list of 2-element tuples with object
+        Unsized objects are represented as list of 2-element tuple with object
         key and value.
     """
     dispatch = {}
@@ -269,10 +269,10 @@ class Draft9Encoder(object):
     | :class:`bool`               | :const:`False` => false            |       |
     |                             | :const:`True`  => true             |       |
     +-----------------------------+------------------------------------+-------+
-    | :class:`int`,               | `integer` or `huge`                | \(1)  |
+    | :class:`int`,               | `integer` or `hidef`               | \(1)  |
     | :class:`long`               |                                    |       |
     +-----------------------------+------------------------------------+-------+
-    | :class:`float`              | `float`, `null` or `huge`          | \(2)  |
+    | :class:`float`              | `float`, `null` or `hidef`         | \(2)  |
     +-----------------------------+------------------------------------+-------+
     | :class:`str`,               | string                             | \(3)  |
     | :class:`unicode`            |                                    |       |
@@ -284,9 +284,10 @@ class Draft9Encoder(object):
     | :class:`frozenset`,         |                                    |       |
     | :class:`XRange`             |                                    |       |
     +-----------------------------+------------------------------------+-------+
-    | :class:`dict`               | object                             |       |
+    | :class:`dict`,              | object                             | \(4)  |
+    | :class:`dict_itemsiterator` |                                    |       |
     +-----------------------------+------------------------------------+-------+
-    | :class:`decimal.Decimal`    | huge                               |       |
+    | :class:`decimal.Decimal`    | hidef                              |       |
     +-----------------------------+------------------------------------+-------+
 
     Notes:
@@ -310,6 +311,10 @@ class Draft9Encoder(object):
 
     (3)
         If string is `unicode` it will be encoded with `utf-8` charset.
+
+    (4)
+        Dict keys should have string type or :exc:`simpleubjson.EncodeError`
+        will be raised.
     """
 
     dispatch = {}

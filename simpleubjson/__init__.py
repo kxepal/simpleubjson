@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2011-2012 Alexander Shorin
+# Copyright (C) 2011-2013 Alexander Shorin
 # All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
@@ -42,14 +42,6 @@ def decode(data, allow_noop=False, spec='draft8'):
     :type spec: str
 
     :return: Decoded Python object. See mapping table below.
-
-    :raises:
-        ValueError if:
-            * Nothing to decode: empty data source.
-            * Unsupported marker: probably it's invalid.
-            * Unexpected marker: `noop` value or EOS shouldn't occurs in sized
-              arrays or objects.
-            * Object key is not string type.
     """
 
     if spec.lower() in ['draft8', 'draft-8']:
@@ -77,10 +69,6 @@ def encode(data, output=None, default=None, spec='draft-8'):
     :return: Encoded Python object. See mapping table below.
              If `output` param is specified, all data would be written into it
              by chunks and None will be returned.
-
-    :raises:
-        * TypeError if no handlers specified for passed value type.
-        * ValueError if unable to pack Python value to binary form.
     """
     if spec.lower() in ['draft8', 'draft-8']:
         res = _draft8_encoder(default).encode_next(data)
