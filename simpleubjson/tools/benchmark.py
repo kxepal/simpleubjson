@@ -75,9 +75,7 @@ def make_benchmark(name, count):
     print format_results('simpleubjson',  '0.6-dev',
                          'Decoded Draft-9', total, count)
 
-    src = data
-    func = lambda *a, **k: list(simpleubjson.encode(*a, **k))
-    total = run_test(func, count, src, spec='draft-9')
+    total = run_test(simpleubjson.encode, count, data, spec='draft-9')
     print format_results('simpleubjson',  '0.6-dev',
                          'Encoded Draft-9', total, count)
 
@@ -196,7 +194,7 @@ def main():
     except getopt.GetoptError:
         print(main.__doc__)
         sys.exit(2)
-    count = 1000
+    count = 100000
     for key, value in opts:
         print(key, value)
         if key in ('-h', '--help'):
