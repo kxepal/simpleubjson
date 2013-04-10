@@ -346,32 +346,25 @@ class Draft9Encoder(object):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
             return INT8 + CHARS[obj % 256]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
-            marker = INT16
-            token = '>h'
+            return INT16 + pack('>h', obj)
         elif (-2 ** 31) <= obj <= (2 ** 31 - 1):
-            marker = INT32
-            token = '>i'
+            return INT32 + pack('>i', obj)
         elif (-2 ** 63) <= obj <= (2 ** 63 - 1):
-            marker = INT64
-            token = '>q'
+            return INT64 + pack('>q', obj)
         else:
             return self.encode_decimal(Decimal(obj))
-        return marker + pack(token, obj)
     dispatch[int] = encode_int
     dispatch[long] = encode_int
 
     def encode_float(self, obj):
         if 1.18e-38 <= abs(obj) <= 3.4e38:
-            marker = FLOAT
-            token = '>f'
+            return FLOAT + pack('>f', obj)
         elif 2.23e-308 <= abs(obj) < 1.8e308:
-            marker = DOUBLE
-            token = '>d'
+            return DOUBLE + pack('>d', obj)
         elif obj == float('inf') or obj == float('-inf'):
             return NULL
         else:
             return self.encode_decimal(Decimal(obj))
-        return marker + pack(token, obj)
     dispatch[float] = encode_float
 
     def encode_str(self, obj):

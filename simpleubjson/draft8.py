@@ -331,39 +331,32 @@ class Draft8Encoder(object):
     dispatch[type(None)] = encode_none
 
     def encode_bool(self, obj):
-        return [FALSE, TRUE][obj]
+        return TRUE if obj else FALSE
     dispatch[bool] = encode_bool
 
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
             return INT8 + CHARS[obj % 256]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
-            marker = INT16
-            token = '>h'
+            return INT16 + pack('>h', obj)
         elif (-2 ** 31) <= obj <= (2 ** 31 - 1):
-            marker = INT32
-            token = '>i'
+            return INT32 + pack('>i', obj)
         elif (-2 ** 63) <= obj <= (2 ** 63 - 1):
-            marker = INT64
-            token = '>q'
+            return INT64 + pack('>q', obj)
         else:
             return self.encode_decimal(Decimal(obj))
-        return marker + pack(token, obj)
     dispatch[int] = encode_int
     dispatch[long] = encode_int
 
     def encode_float(self, obj):
         if 1.18e-38 <= abs(obj) <= 3.4e38:
-            marker = FLOAT
-            token = '>f'
+            return FLOAT + pack('>f', obj)
         elif 2.23e-308 <= abs(obj) < 1.8e308:
-            marker = DOUBLE
-            token = '>d'
+            return DOUBLE + pack('>d', obj)
         elif obj == float('inf') or obj == float('-inf'):
             return NULL
         else:
             return self.encode_decimal(Decimal(obj))
-        return marker + pack(token, obj)
     dispatch[float] = encode_float
 
     def encode_str(self, obj):
@@ -389,12 +382,9 @@ class Draft8Encoder(object):
     def encode_sequence(self, obj):
         length = len(obj)
         if length < 255:
-            marker = ARRAY_S
-            size = CHARS[length]
+            yield ARRAY_S + CHARS[length]
         else:
-            marker = ARRAY_L
-            size = pack('>I', length)
-        yield marker + size
+            yield ARRAY_L + pack('>I', length)
         for item in obj:
             yield self.encode_next(item)
     dispatch[tuple] = encode_sequence
@@ -405,12 +395,9 @@ class Draft8Encoder(object):
     def encode_dict(self, obj):
         length = len(obj)
         if length < 255:
-            marker = OBJECT_S
-            size = CHARS[length]
+            yield OBJECT_S + CHARS[length]
         else:
-            marker = OBJECT_L
-            size = pack('>I', length)
-        yield marker + size
+            yield OBJECT_L + pack('>I', length)
         for key, value in obj.items():
             yield self.encode_next(key)
             yield self.encode_next(value)
