@@ -9,9 +9,9 @@
 
 import sys
 import simpleubjson
-from simpleubjson.draft8 import Draft8Decoder
-from simpleubjson.draft9 import Draft9Decoder
-from simpleubjson.exceptions import EarlyEndOfStreamError
+from ..draft8 import Draft8Decoder
+from ..draft9 import Draft9Decoder
+from ..exceptions import EarlyEndOfStreamError
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,

@@ -9,14 +9,14 @@
 
 from decimal import Decimal
 from struct import pack, unpack
-from simpleubjson import NOOP as NOOP_SENTINEL
-from simpleubjson.exceptions import (
-    EncodeError, MarkerError, EarlyEndOfStreamError
-)
-from simpleubjson.compat import (
+from . import NOOP as NOOP_SENTINEL
+from .compat import (
     BytesIO, b, bytes, unicode, basestring, long, xrange,
     dict_itemsiterator, dict_keysiterator, dict_valuesiterator,
     isinf, isnan
+)
+from .exceptions import (
+    EncodeError, MarkerError, EarlyEndOfStreamError
 )
 
 
