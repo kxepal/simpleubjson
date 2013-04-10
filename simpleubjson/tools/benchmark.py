@@ -60,11 +60,11 @@ def make_benchmark(name, count):
 
     src = simpleubjson.encode(data, spec='draft-8')
     total = run_test(simpleubjson.decode, count, src, spec='draft-8')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  simpleubjson.__version__,
                          'Decoded Draft-8', total, count)
 
     total = run_test(simpleubjson.encode, count, data, spec='draft-8')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  simpleubjson.__version__,
                          'Encoded Draft-8', total, count)
 
     print
@@ -72,11 +72,11 @@ def make_benchmark(name, count):
     src = simpleubjson.encode(data, spec='draft-9')
     func = lambda *a, **k: list(simpleubjson.decode(*a, **k))
     total = run_test(func, count, src, spec='draft-9')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  simpleubjson.__version__,
                          'Decoded Draft-9', total, count)
 
     total = run_test(simpleubjson.encode, count, data, spec='draft-9')
-    print format_results('simpleubjson',  '0.6-dev',
+    print format_results('simpleubjson',  simpleubjson.__version__,
                          'Encoded Draft-9', total, count)
 
     if json:

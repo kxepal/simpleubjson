@@ -8,6 +8,7 @@
 # you should have received as part of this distribution.
 #
 
+import imp
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -26,7 +27,7 @@ except ImportError:
         packages = {}
         for item in os.listdir(path):
             dir = os.path.join(path, item)
-            if is_package( dir ):
+            if is_package(dir):
                 if base:
                     module_name = "%(base)s.%(item)s" % vars()
                 else:
@@ -35,9 +36,12 @@ except ImportError:
                 packages.update(find_packages(dir, module_name))
         return packages
 
+mod = imp.load_module('version',
+                      *imp.find_module('version', ['./simpleubjson/']))
+
 setup(
     name = 'simpleubjson',
-    version = '0.6-issue.6',
+    version = mod.__version__,
     description = 'Simple universal binary json decoder/encoder for Python.',
 
     author = 'Alexander Shorin',

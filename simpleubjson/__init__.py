@@ -16,6 +16,7 @@ EOS_A = type('EndOfArrayStream', (_EOS,), {'__slots__': ()})()
 EOS_O = type('EndOfObjectStream', (_EOS,), {'__slots__': ()})()
 del _EOS
 
+from simpleubjson.version import __version__
 from simpleubjson.draft8 import Draft8Decoder, Draft8Encoder
 from simpleubjson.draft9 import Draft9Decoder, Draft9Encoder
 from simpleubjson.tools.inspect import pprint
