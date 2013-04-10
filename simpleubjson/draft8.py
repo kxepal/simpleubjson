@@ -402,7 +402,9 @@ class Draft8Encoder(object):
         else:
             yield OBJECT_L + pack('>I', length)
         for key, value in obj.items():
-            yield self.encode_next(key)
+            if not isinstance(key, basestring):
+                raise EncodeError('invalid object key %r' % key)
+            yield self.encode_str(key)
             yield self.encode_next(value)
     dispatch[dict] = encode_dict
 
