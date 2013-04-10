@@ -15,7 +15,8 @@ from simpleubjson.exceptions import (
 )
 from simpleubjson.compat import (
     BytesIO, b, bytes, unicode, basestring, long, xrange,
-    dict_itemsiterator, dict_keysiterator, dict_valuesiterator
+    dict_itemsiterator, dict_keysiterator, dict_valuesiterator,
+    isinf, isnan
 )
 
 
@@ -421,7 +422,7 @@ class Draft8Encoder(object):
             return FLOAT + pack('>f', obj)
         elif 2.23e-308 <= abs(obj) < 1.8e308:
             return DOUBLE + pack('>d', obj)
-        elif obj == float('inf') or obj == float('-inf'):
+        elif isinf(obj) or isnan(obj):
             return NULL
         else:
             return self.encode_decimal(Decimal(obj))

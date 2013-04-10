@@ -272,6 +272,7 @@ class FloatTestCase(Draft8TestCase):
     def test_encode_inf_value_as_null(self):
         self.assertEqual(self.encode(float('inf')), b('Z'))
         self.assertEqual(self.encode(float('-inf')), b('Z'))
+        self.assertEqual(self.encode(float('NaN')), b('Z'))
 
 
 class StringTestCase(Draft8TestCase):
