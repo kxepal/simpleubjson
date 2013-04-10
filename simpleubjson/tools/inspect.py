@@ -11,6 +11,7 @@ import sys
 import simpleubjson
 from simpleubjson.draft8 import Draft8Decoder
 from simpleubjson.draft9 import Draft9Decoder
+from simpleubjson.exceptions import EarlyEndOfStreamError
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,
@@ -40,9 +41,12 @@ def pprint(data, output=sys.stdout, allow_noop=True,
             output.write(data)
             output.flush()
 
-    def inspect_draft8(stream, level, container_size):
-        for marker, tlv in stream:
-            tag, length, value = tlv
+    def inspect_draft8(decoder, level, container_size):
+        while 1:
+            try:
+                tag, length, value = decoder.next_tlv()
+            except EarlyEndOfStreamError:
+                break
             # standalone markers
             if length is None and value is None:
                 if tag == 'E':
@@ -56,16 +60,16 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 maybe_write('[%s] [%s]\n' % (tag, length), level)
                 if tag in 'oO':
                     length = length == 255 and length or length * 2
-                inspect_draft8(stream, level + 1, length)
+                inspect_draft8(decoder, level + 1, length)
 
             # plane values
             elif length is None and value is not None:
-                value = marker.decode(None, stream, tlv)
+                value = decoder.dispatch[tag](decoder, tag, length, value)
                 maybe_write('[%s] [%s]\n' % (tag, value), level)
 
             # sized values
             else:
-                value = marker.decode(None, stream, tlv)
+                value = decoder.dispatch[tag](decoder, tag, length, value)
                 maybe_write('[%s] [%s] [%s]\n' % (tag, length, value), level)
 
             if container_size != 255:
@@ -73,9 +77,12 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 if not container_size:
                     return
 
-    def inspect_draft9(stream, level, *args):
-        for marker, tlv in stream:
-            tag, length, value = tlv
+    def inspect_draft9(decoder, level, *args):
+        while 1:
+            try:
+                tag, length, value = decoder.next_tlv()
+            except EarlyEndOfStreamError:
+                break
             # standalone markers
             if length is None and value is None:
                 if tag in ']}':
@@ -86,26 +93,26 @@ def pprint(data, output=sys.stdout, allow_noop=True,
 
             # plane values
             elif length is None and value is not None:
-                value = marker.decode(None, stream, tlv)
+                value = decoder.dispatch[tag](decoder, tag, length, value)
                 maybe_write('[%s] [%s]\n' % (tag, value), level)
 
             # sized values
             else:
-                value = marker.decode(None, stream, tlv)
+                value = decoder.dispatch[tag](decoder, tag, length, value)
                 pattern = '[%s] [%s] [%s] [%s]\n'
                 # very dirty hack to show size as marker and value
-                _stream = streamify(simpleubjson.encode(length, spec=spec), markers)
-                for marker, stlv in _stream:
-                    args = tuple([tag, stlv[0], stlv[2], value])
+                _decoder = Draft9Decoder(simpleubjson.encode(length, spec=spec))
+                tlv = _decoder.next_tlv()
+                args = tuple([tag, tlv[0], tlv[2], value])
                 maybe_write(pattern % args, level)
 
     if spec.lower() in ['draft8', 'draft-8']:
-        markers = Draft8Decoder().markers
+        decoder = Draft8Decoder(data, allow_noop)
         inspect = inspect_draft8
     elif spec.lower() in ['draft9', 'draft-9']:
-        markers = Draft9Decoder().markers
+        decoder = Draft9Decoder(data, allow_noop)
         inspect = inspect_draft9
     else:
         raise ValueError('Unknown or unsupported specification %s' % spec)
 
-    inspect(streamify(data, markers=markers, allow_noop=allow_noop), 0, 255)
+    inspect(decoder, 0, 255)
