@@ -224,7 +224,7 @@ class Draft8Decoder(object):
     def decode_array(self, tag, length, value):
         if tag == ARRAY_S and length == 255:
             return self.decode_array_stream(tag, length, value)
-        res = []
+        res = [None] * length
         for _ in range(length):
             tag, length, value = self.next_tlv()
             if tag in FORBIDDEN:
@@ -232,7 +232,7 @@ class Draft8Decoder(object):
             item = self.dispatch[tag](self, tag, length, value)
             if tag in STREAMS and length == 255:
                 item = list(item)
-            res.append(item)
+            res[_] = item
         return res
     dispatch[ARRAY_S] = decode_array
     dispatch[ARRAY_L] = decode_array
