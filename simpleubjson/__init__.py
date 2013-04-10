@@ -19,8 +19,9 @@ del _EOS
 from simpleubjson.draft8 import Draft8Decoder, Draft8Encoder
 from simpleubjson.draft9 import Draft9Decoder, Draft9Encoder
 from simpleubjson.tools.inspect import pprint
+from simpleubjson.exceptions import DecodeError, EncodeError
 
-__all__ = ['decode', 'encode', 'pprint', 'NOOP', 'EOS']
+__all__ = ['decode', 'encode', 'pprint', 'NOOP', 'DecodeError', 'EncodeError']
 
 _draft8_decoder = Draft8Decoder
 _draft8_encoder = Draft8Encoder
