@@ -346,19 +346,19 @@ class Draft8Encoder(object):
     (1)
         Depending on value it may be encoded into various UBJSON types:
 
-            * [-2^7, 2^7): ``int8``
-            * [-2^15, 2^15): ``int16``
-            * [-2^31, 2^31): ``int32``
-            * [-2^63, 2^63): ``int64``
-            * everything bigger/smaller: ``huge``
+        * [-2^7, 2^7): ``int8``
+        * [-2^15, 2^15): ``int16``
+        * [-2^31, 2^31): ``int32``
+        * [-2^63, 2^63): ``int64``
+        * everything bigger/smaller: ``huge``
 
     (2)
         Depending on value it may be encoded into various UBJSON types:
 
-            * 1.18e-38 <= abs(value) <= 3.4e38: ``float``
-            * 2.23e-308 <= abs(value) < 1.8e308: ``double``
-            * :const:`inf`, :const:`-inf`: ``null``
-            * everything bigger/smaller: ``huge``
+        * 1.18e-38 <= abs(value) <= 3.4e38: ``float``
+        * 2.23e-308 <= abs(value) < 1.8e308: ``double``
+        * :const:`inf`, :const:`-inf`: ``null``
+        * everything bigger/smaller: ``huge``
 
     (3)
         Depending on object length short or long version of UBJSON type may be
