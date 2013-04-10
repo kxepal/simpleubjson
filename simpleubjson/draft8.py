@@ -134,13 +134,9 @@ class Draft8Decoder(object):
         return self
 
     def next_tlv(self):
-        while 1:
+        tag = self.read(1)
+        while tag == NOOP and not self.allow_noop:
             tag = self.read(1)
-            if not tag:
-                raise EarlyEndOfStreamError('nothing to decode')
-            if tag == NOOP and not self.allow_noop:
-                continue
-            break
         if tag in NUMBERS:
             if tag == INT8:
                 # Trivial operations for trivial cases saves a lot of time
@@ -174,6 +170,8 @@ class Draft8Decoder(object):
             return tag, length, None
         elif tag in CONSTANTS:
             return tag, None, None
+        elif not tag:
+            raise EarlyEndOfStreamError('nothing to decode')
         else:
             raise MarkerError('invalid marker 0x%02x (%r)' % (ord(tag), tag))
 
