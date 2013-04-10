@@ -9,7 +9,6 @@
 
 import sys
 import simpleubjson
-from simpleubjson.common import streamify
 from simpleubjson.draft8 import Draft8Decoder
 from simpleubjson.draft9 import Draft9Decoder
 
