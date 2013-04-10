@@ -105,7 +105,6 @@ class Draft9Decoder(object):
             source = source.encode('utf-8')
         if isinstance(source, bytes):
             source = BytesIO(source)
-        self.index = []
         self.read = source.read
         self.allow_noop = allow_noop
         self.dispatch = self.dispatch.copy()
@@ -207,26 +206,6 @@ class Draft9Decoder(object):
         return Decimal(value.decode('utf-8'))
     dispatch[HIDEF] = decode_hidef
 
-    def decode_array_open(self, tag, length, value):
-        self.index.append(BOS_A)
-    dispatch[ARRAY_OPEN] = decode_array_open
-
-    def decode_object_open(self, tag, length, value):
-        self.index.append(BOS_O)
-    dispatch[OBJECT_OPEN] = decode_object_open
-
-    def decode_array(self, tag, length, value):
-        if not self.index:
-            raise StopIteration
-        raise EarlyEndOfStreamError
-    dispatch[ARRAY_CLOSE] = decode_array
-
-    def decode_object(self, tag, length, value):
-        if not self.index:
-            raise StopIteration
-        raise EarlyEndOfStreamError
-    dispatch[OBJECT_CLOSE] = decode_object
-
     def decode_array_stream(self, tag, length, value):
         def array_stream():
             while 1:
@@ -239,6 +218,10 @@ class Draft9Decoder(object):
                     yield self.dispatch[tag](self, tag, length, value)
         return array_stream()
     dispatch[ARRAY_OPEN] = decode_array_stream
+
+    def decode_array_close(self, tag, length, value):
+        raise EarlyEndOfStreamError
+    dispatch[ARRAY_CLOSE] = decode_array_close
 
     def decode_object_stream(self, tag, length, value):
         def object_stream():
@@ -268,6 +251,10 @@ class Draft9Decoder(object):
                         key = None
         return object_stream()
     dispatch[OBJECT_OPEN] = decode_object_stream
+
+    def decode_object_close(self, tag, length, value):
+        raise EarlyEndOfStreamError
+    dispatch[OBJECT_CLOSE] = decode_object_close
 
 
 class Draft9Encoder(object):
