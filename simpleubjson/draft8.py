@@ -155,12 +155,15 @@ class Draft8Decoder(object):
             elif tag == DOUBLE:
                 value, = unpack('>d', self.read(8))
             else:
-                assert False, 'tag %r not in NUMBERS %r' % (tag, NUMBERS)
+                raise MarkerError('tag %r not in NUMBERS %r' % (tag, NUMBERS))
             return tag, None, value
         elif tag in SHORT_OBJ:
             length = ord(self.read(1))
             if tag in STRINGS:
-                assert length < 255, 'invalid string length'
+                if length == 255:
+                    raise MarkerError(
+                        'Short string objects (%r) should not have length 255'
+                        % tag)
                 return tag, length, self.read(length)
             return tag, length, None
         elif tag in LARGE_OBJ:
@@ -245,7 +248,7 @@ class Draft8Decoder(object):
             if tag in FORBIDDEN:
                 raise MarkerError('invalid marker found: %02X' % ord(tag))
             if key is None and tag not in OBJECT_KEYS:
-                raise ValueError('key should be string, got %r' % (tag))
+                raise MarkerError('key should be string, got %r' % (tag))
             value = self.dispatch[tag](self, tag, length, value)
             if key is None:
                 key = value
@@ -286,7 +289,7 @@ class Draft8Decoder(object):
                             'value missed for key %r' % key)
                     break
                 elif key is None and tag not in OBJECT_KEYS:
-                    raise ValueError('key should be string')
+                    raise MarkerError('key should be string, got %r' % (tag))
                 else:
                     value = self.dispatch[tag](self, tag, length, value)
                     if key is None:
@@ -418,7 +421,7 @@ class Draft8Encoder(object):
         for key, value in obj:
             if not isinstance(key, basestring):
                 raise EncodeError('invalid object key %r' % key)
-            yield self.encode_next(key)
+            yield self.encode_str(key)
             yield self.encode_next(value)
         yield EOS
     dispatch[dict_itemsiterator] = encode_dictitems

@@ -134,7 +134,7 @@ class Draft9Decoder(object):
             elif tag == DOUBLE:
                 value, = unpack('>d', self.read(8))
             else:
-                assert False, 'tag %r not in NUMBERS %r' % (tag, NUMBERS)
+                raise MarkerError('tag %r not in NUMBERS %r' % (tag, NUMBERS))
             return tag, None, value
         elif tag in STRINGS:
             # Don't be recursive for string length calculation to save time
@@ -236,7 +236,7 @@ class Draft9Decoder(object):
                             'value missed for key %r' % key)
                     break
                 elif tag != STRING and key is None:
-                    raise ValueError('key should be string')
+                    raise MarkerError('key should be string, got %r' % (tag))
                 else:
                     value = self.dispatch[tag](self, tag, length, value)
                     if key is None:
@@ -400,6 +400,8 @@ class Draft9Encoder(object):
         else:
             items = obj
         for key, value in items:
+            if not isinstance(key, basestring):
+                raise EncodeError('invalid object key %r' % key)
             yield self.encode_str(key)
             yield self.encode_next(value)
         yield OBJECT_CLOSE
