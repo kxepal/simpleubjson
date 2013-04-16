@@ -403,6 +403,8 @@ class Draft9Encoder(object):
         length = len(obj)
         if length == 1:
             return CHAR + obj
+        elif length <= 255:
+            return STRING + UINT8 + CHARS[length] + obj
         return STRING + self.encode_int(length) + obj
     dispatch[bytes] = encode_str
     dispatch[unicode] = encode_str
