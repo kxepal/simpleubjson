@@ -106,7 +106,7 @@ class BooleanTestCase(Draft9TestCase):
         self.assertEqual(data, b('T'))
 
 
-class ByteTestCase(Draft9TestCase):
+class Int8TestCase(Draft9TestCase):
 
     def test_decode(self):
         data = self.decode('i\x2a')
@@ -123,6 +123,21 @@ class ByteTestCase(Draft9TestCase):
     def test_encode_negative(self):
         data = self.encode(-42)
         self.assertEqual(data, b('i\xd6'))
+
+
+class UInt8TestCase(Draft9TestCase):
+
+    def test_decode(self):
+        data = self.decode('U\x2a')
+        self.assertEqual(data, 42)
+
+    def test_encode(self):
+        data = self.encode(214)
+        self.assertEqual(data, b('U\xd6'))
+
+    def test_decode_higher_than_128(self):
+        data = self.decode(b('U\xd6'))
+        self.assertEqual(data, 214)
 
 
 class Integer16TestCase(Draft9TestCase):

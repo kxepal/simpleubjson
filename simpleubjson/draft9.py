@@ -25,6 +25,7 @@ NULL = b('Z')
 FALSE = b('F')
 TRUE = b('T')
 INT8 = b('i')
+UINT8 = b('U')
 INT16 = b('I')
 INT32 = b('l')
 INT64 = b('L')
@@ -42,7 +43,7 @@ BOS_O = object()
 
 CONSTANTS = set([NOOP, NULL, FALSE, TRUE])
 CONTAINERS = set([ARRAY_OPEN, ARRAY_CLOSE, OBJECT_OPEN, OBJECT_CLOSE])
-NUMBERS = set([INT8, INT16, INT32, INT64, FLOAT, DOUBLE])
+NUMBERS = set([INT8, UINT8, INT16, INT32, INT64, FLOAT, DOUBLE])
 STRINGS = set([STRING, HIDEF])
 
 CHARS = dict((i, b(chr(i))) for i in range(256))
@@ -66,6 +67,8 @@ class Draft9Decoder(object):
     | ``T``  | true                       | bool                       |       |
     +--------+----------------------------+----------------------------+-------+
     | ``i``  | int8                       | int                        |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``U``  | uint8                      | int                        |       |
     +--------+----------------------------+----------------------------+-------+
     | ``I``  | int16                      | int                        |       |
     +--------+----------------------------+----------------------------+-------+
@@ -124,6 +127,8 @@ class Draft9Decoder(object):
                 if value > 128:
                     value -= 256
                     #value, = unpack('>b', self.read(1))
+            elif tag == UINT8:
+                value = ord(self.read(1))
             elif tag == INT16:
                 value, = unpack('>h', self.read(2))
             elif tag == INT32:
@@ -144,6 +149,8 @@ class Draft9Decoder(object):
                 length = ord(self.read(1))
                 if length > 128:
                     length -= 256
+            elif ltag == UINT8:
+                length = ord(self.read(1))
             elif ltag == INT16:
                 length, = unpack('>h', self.read(2))
             elif ltag == INT32:
@@ -188,6 +195,7 @@ class Draft9Decoder(object):
     def decode_int(self, tag, length, value):
         return value
     dispatch[INT8] = decode_int
+    dispatch[UINT8] = decode_int
     dispatch[INT16] = decode_int
     dispatch[INT32] = decode_int
     dispatch[INT64] = decode_int
@@ -297,6 +305,7 @@ class Draft9Encoder(object):
         Depending on value it may be encoded into various UBJSON types:
 
         * [-2^7, 2^7): ``int8``
+        * [0, 2^8): ``uint8``
         * [-2^15, 2^15): ``int16``
         * [-2^31, 2^31): ``int32``
         * [-2^63, 2^63): ``int64``
@@ -351,6 +360,8 @@ class Draft9Encoder(object):
     def encode_int(self, obj):
         if (-2 ** 7) <= obj <= (2 ** 7 - 1):
             return INT8 + CHARS[obj % 256]
+        elif 0 <= obj <= 255:
+            return UINT8 + CHARS[obj]
         elif (-2 ** 15) <= obj <= (2 ** 15 - 1):
             return INT16 + pack('>h', obj)
         elif (-2 ** 31) <= obj <= (2 ** 31 - 1):
