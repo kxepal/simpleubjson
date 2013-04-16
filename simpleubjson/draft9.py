@@ -31,6 +31,7 @@ INT32 = b('l')
 INT64 = b('L')
 FLOAT = b('d')
 DOUBLE = b('D')
+CHAR = b('C')
 STRING = b('S')
 HIDEF = b('H')
 ARRAY_OPEN = b('[')
@@ -45,6 +46,7 @@ CONSTANTS = set([NOOP, NULL, FALSE, TRUE])
 CONTAINERS = set([ARRAY_OPEN, ARRAY_CLOSE, OBJECT_OPEN, OBJECT_CLOSE])
 NUMBERS = set([INT8, UINT8, INT16, INT32, INT64, FLOAT, DOUBLE])
 STRINGS = set([STRING, HIDEF])
+OBJECT_KEYS = set([CHAR, STRING])
 
 CHARS = dict((i, b(chr(i))) for i in range(256))
 
@@ -81,6 +83,8 @@ class Draft9Decoder(object):
     | ``D``  | double                     | float                      |       |
     +--------+----------------------------+----------------------------+-------+
     | ``H``  | hidef                      | decimal.Decimal            |       |
+    +--------+----------------------------+----------------------------+-------+
+    | ``C``  | char                       | unicode                    |       |
     +--------+----------------------------+----------------------------+-------+
     | ``S``  | string                     | unicode                    |       |
     +--------+----------------------------+----------------------------+-------+
@@ -163,6 +167,8 @@ class Draft9Decoder(object):
                 raise MarkerError('invalid string size marker 0x%02X (%r)'
                                   '' % (ord(ltag), ltag))
             return tag, length, self.read(length)
+        elif tag == CHAR:
+            return tag, None, self.read(1)
         elif tag in CONSTANTS or tag in CONTAINERS:
             return tag, None, None
         elif not tag:
@@ -205,6 +211,10 @@ class Draft9Decoder(object):
     dispatch[FLOAT] = decode_float
     dispatch[DOUBLE] = decode_float
 
+    def decode_char(self, tag, length, value):
+        return value.decode('latin-1')
+    dispatch[CHAR] = decode_char
+
     def decode_string(self, tag, length, value):
         return value.decode('utf-8')
     dispatch[STRING] = decode_string
@@ -244,7 +254,7 @@ class Draft9Decoder(object):
                         raise EarlyEndOfStreamError(
                             'value missed for key %r' % key)
                     break
-                elif tag != STRING and key is None:
+                elif key is None and tag not in OBJECT_KEYS:
                     raise MarkerError('key should be string, got %r' % (tag))
                 else:
                     value = self.dispatch[tag](self, tag, length, value)
@@ -283,7 +293,7 @@ class Draft9Encoder(object):
     +-----------------------------+------------------------------------+-------+
     | :class:`float`              | `float`, `null` or `hidef`         | \(2)  |
     +-----------------------------+------------------------------------+-------+
-    | :class:`str`,               | string                             | \(3)  |
+    | :class:`str`,               | char or string                     | \(3)  |
     | :class:`unicode`            |                                    |       |
     +-----------------------------+------------------------------------+-------+
     | :class:`tuple`,             | array                              |       |
@@ -320,7 +330,10 @@ class Draft9Encoder(object):
         * everything bigger/smaller: ``huge``
 
     (3)
-        If string is `unicode` it will be encoded with `utf-8` charset.
+        If string contains only single character that has code in range 0-255,
+        it will be encoded as ``char`` type. In other case if string is
+        `unicode` it will be encoded with `utf-8` charset.
+
 
     (4)
         Dict keys should have string type or :exc:`simpleubjson.EncodeError`
@@ -387,7 +400,10 @@ class Draft9Encoder(object):
     def encode_str(self, obj):
         if isinstance(obj, unicode):
             obj = obj.encode('utf-8')
-        return STRING + self.encode_int(len(obj)) + obj
+        length = len(obj)
+        if length == 1:
+            return CHAR + obj
+        return STRING + self.encode_int(length) + obj
     dispatch[bytes] = encode_str
     dispatch[unicode] = encode_str
 

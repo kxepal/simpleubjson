@@ -290,6 +290,17 @@ class FloatTestCase(Draft9TestCase):
         self.assertEqual(self.encode(float('NaN')), b('Z'))
 
 
+class CharTestCase(Draft9TestCase):
+
+    def test_decode(self):
+        data = self.decode(b('C\x42'))
+        self.assertEqual(data, 'B')
+
+    def test_encode(self):
+        data = self.encode('B')
+        self.assertEqual(data, 'C\x42')
+
+
 class StringTestCase(Draft9TestCase):
 
     def test_decode_ascii(self):
@@ -447,6 +458,10 @@ class ObjectTestCase(Draft9TestCase):
     def test_decode_object(self):
         data = dict(self.decode(b('{Si\x03fooSi\x03barSi\x03barSi\x03baz}')))
         self.assertEqual(data, {'foo': 'bar', 'bar': 'baz'})
+
+    def test_decode_object_with_char_key(self):
+        data = dict(self.decode(b('{CUSi\x06UBJSON}')))
+        self.assertEqual(data, {'U': 'UBJSON'})
 
     def test_encode_object(self):
         data = self.encode({'foo': 'bar'})
