@@ -298,7 +298,7 @@ class CharTestCase(Draft9TestCase):
 
     def test_encode(self):
         data = self.encode('B')
-        self.assertEqual(data, 'C\x42')
+        self.assertEqual(data, b('C\x42'))
 
 
 class StringTestCase(Draft9TestCase):
