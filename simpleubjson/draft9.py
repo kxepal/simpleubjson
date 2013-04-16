@@ -11,7 +11,7 @@ from decimal import Decimal
 from struct import pack, unpack
 from . import NOOP as NOOP_SENTINEL
 from simpleubjson.compat import (
-    BytesIO, b, bytes, unicode, long, xrange,
+    BytesIO, basestring, b, bytes, unicode, long, xrange,
     dict_itemsiterator, dict_keysiterator, dict_valuesiterator,
     isinf, isnan
 )
