@@ -5,6 +5,12 @@
 - Add support of CHAR type for Draft-9 spec;
 - Optimize strings encoding with new types;
 
+0.6.1 (dev)
+-----------
+
+- Fix compatibility with Python 3.x;
+- Improve UBJSON decoding performance;
+
 0.6.0 (2013-04-10)
 ------------------
 

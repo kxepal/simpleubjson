@@ -28,6 +28,12 @@ Draft 9 implementation
 
    `Draft 9 breaking changes <http://ubjson.org/#latest>`_
 
+Changes
+=======
+
+.. include:: ../CHANGES.rst
+
+
 .. automodule:: simpleubjson.draft9
   :members:
 
