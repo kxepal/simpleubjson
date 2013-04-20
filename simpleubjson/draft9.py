@@ -224,15 +224,20 @@ class Draft9Decoder(object):
     dispatch[HIDEF] = decode_hidef
 
     def decode_array_stream(self, tag, length, value):
+        dispatch = self.dispatch
+        next_tlv = self.next_tlv
+        array_close = ARRAY_CLOSE
+        container_openers = set([ARRAY_OPEN, OBJECT_OPEN])
         def array_stream():
             while 1:
-                tag, length, value = self.next_tlv()
-                if tag == ARRAY_CLOSE:
+                tag, length, value = next_tlv()
+                if tag == array_close:
                     break
-                elif tag in [ARRAY_OPEN, OBJECT_OPEN]:
-                    yield list(self.dispatch[tag](self, tag, length, value))
+                item = dispatch[tag](self, tag, length, value)
+                if tag in container_openers:
+                    yield list(item)
                 else:
-                    yield self.dispatch[tag](self, tag, length, value)
+                    yield item
         return array_stream()
     dispatch[ARRAY_OPEN] = decode_array_stream
 
@@ -243,24 +248,31 @@ class Draft9Decoder(object):
     def decode_object_stream(self, tag, length, value):
         def object_stream():
             key = None
+            dispatch = self.dispatch
+            next_tlv = self.next_tlv
+            noop = NOOP
+            noop_sentinel = NOOP_SENTINEL
+            object_close = OBJECT_CLOSE
+            string = STRING
+            container_openers = set([ARRAY_OPEN, OBJECT_OPEN])
             while 1:
-                tag, length, value = self.next_tlv()
-                if tag == NOOP and key is None:
-                    yield NOOP_SENTINEL, NOOP_SENTINEL
-                elif tag == NOOP and key:
+                tag, length, value = next_tlv()
+                if tag == noop and key is None:
+                    yield noop_sentinel, noop_sentinel
+                elif tag == noop and key:
                     continue
-                elif tag == OBJECT_CLOSE:
+                elif tag == object_close:
                     if key:
                         raise EarlyEndOfStreamError(
                             'value missed for key %r' % key)
                     break
-                elif key is None and tag not in OBJECT_KEYS:
+                elif tag != string and key is None:
                     raise MarkerError('key should be string, got %r' % (tag))
                 else:
-                    value = self.dispatch[tag](self, tag, length, value)
+                    value = dispatch[tag](self, tag, length, value)
                     if key is None:
                         key = value
-                    elif tag in [ARRAY_OPEN, OBJECT_OPEN]:
+                    elif tag in container_openers:
                         yield key, list(value)
                         key = None
                     else:

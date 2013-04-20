@@ -227,12 +227,16 @@ class Draft8Decoder(object):
         if tag == ARRAY_S and length == 255:
             return self.decode_array_stream(tag, length, value)
         res = [None] * length
+        next_tlv = self.next_tlv
+        dispatch = self.dispatch
+        forbidden = FORBIDDEN
+        streams = STREAMS
         for _ in range(length):
-            tag, length, value = self.next_tlv()
-            if tag in FORBIDDEN:
+            tag, length, value = next_tlv()
+            if tag in forbidden:
                 raise MarkerError('invalid marker occurs: %02X' % ord(tag))
-            item = self.dispatch[tag](self, tag, length, value)
-            if tag in STREAMS and length == 255:
+            item = dispatch[tag](self, tag, length, value)
+            if tag in streams and length == 255:
                 item = list(item)
             res[_] = item
         return res
@@ -244,17 +248,22 @@ class Draft8Decoder(object):
             return self.decode_object_stream(tag, length, value)
         res = {}
         key = None
+        next_tlv = self.next_tlv
+        dispatch = self.dispatch
+        forbidden = FORBIDDEN
+        object_keys = OBJECT_KEYS
+        streams = STREAMS
         for _ in range(length * 2):
-            tag, length, value = self.next_tlv()
-            if tag in FORBIDDEN:
+            tag, length, value = next_tlv()
+            if tag in forbidden:
                 raise MarkerError('invalid marker found: %02X' % ord(tag))
-            if key is None and tag not in OBJECT_KEYS:
+            if key is None and tag not in object_keys:
                 raise MarkerError('key should be string, got %r' % (tag))
-            value = self.dispatch[tag](self, tag, length, value)
+            value = dispatch[tag](self, tag, length, value)
             if key is None:
                 key = value
             else:
-                if tag in STREAMS and length == 255:
+                if tag in streams and length == 255:
                     value = list(value)
                 res[key] = value
                 key = None
@@ -263,39 +272,50 @@ class Draft8Decoder(object):
     dispatch[OBJECT_L] = decode_object
 
     def decode_array_stream(self, tag, length, value):
+        dispatch = self.dispatch
+        next_tlv = self.next_tlv
+        eos = EOS
+        streams = STREAMS
         def array_stream():
             while 1:
-                tag, length, value = self.next_tlv()
-                if tag == EOS:
+                tag, length, value = next_tlv()
+                if tag == eos:
                     break
-                item = self.dispatch[tag](self, tag, length, value)
-                if tag in STREAMS and length == 255:
+                item = dispatch[tag](self, tag, length, value)
+                if tag in streams and length == 255:
                     yield list(item)
                 else:
                     yield item
         return array_stream()
 
     def decode_object_stream(self, tag, length, value):
+        dispatch = self.dispatch
+        next_tlv = self.next_tlv
+        eos = EOS
+        object_keys = OBJECT_KEYS
+        noop = NOOP
+        noop_sentinel = NOOP_SENTINEL
+        streams = STREAMS
         def object_stream():
             key = None
             while 1:
-                tag, length, value = self.next_tlv()
-                if tag == NOOP and key is None:
-                    yield NOOP_SENTINEL, NOOP_SENTINEL
+                tag, length, value = next_tlv()
+                if tag == noop and key is None:
+                    yield noop_sentinel, noop_sentinel
                 elif tag == NOOP and key:
                     continue
-                elif tag == EOS:
+                elif tag == eos:
                     if key:
-                        raise EarlyEndOfStreamError(
-                            'value missed for key %r' % key)
+                        raise EarlyEndOfStreamError('value missed for key %r'
+                                                    % key)
                     break
-                elif key is None and tag not in OBJECT_KEYS:
+                elif key is None and tag not in object_keys:
                     raise MarkerError('key should be string, got %r' % (tag))
                 else:
-                    value = self.dispatch[tag](self, tag, length, value)
+                    value = dispatch[tag](self, tag, length, value)
                     if key is None:
                         key = value
-                    elif tag in STREAMS:
+                    elif tag in streams:
                         yield key, list(value)
                         key = None
                     else:
