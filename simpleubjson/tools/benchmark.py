@@ -60,36 +60,36 @@ def make_benchmark(name, count):
 
     src = simpleubjson.encode(data, spec='draft-8')
     total = run_test(simpleubjson.decode, count, src, spec='draft-8')
-    print format_results('simpleubjson',  simpleubjson.__version__,
-                         'Decoded Draft-8', total, count)
+    print(format_results('simpleubjson',  simpleubjson.__version__,
+                         'Decoded Draft-8', total, count))
 
     total = run_test(simpleubjson.encode, count, data, spec='draft-8')
-    print format_results('simpleubjson',  simpleubjson.__version__,
-                         'Encoded Draft-8', total, count)
+    print(format_results('simpleubjson',  simpleubjson.__version__,
+                         'Encoded Draft-8', total, count))
 
     print
 
     src = simpleubjson.encode(data, spec='draft-9')
     func = lambda *a, **k: list(simpleubjson.decode(*a, **k))
     total = run_test(func, count, src, spec='draft-9')
-    print format_results('simpleubjson',  simpleubjson.__version__,
-                         'Decoded Draft-9', total, count)
+    print(format_results('simpleubjson',  simpleubjson.__version__,
+                         'Decoded Draft-9', total, count))
 
     total = run_test(simpleubjson.encode, count, data, spec='draft-9')
-    print format_results('simpleubjson',  simpleubjson.__version__,
-                         'Encoded Draft-9', total, count)
+    print(format_results('simpleubjson',  simpleubjson.__version__,
+                         'Encoded Draft-9', total, count))
 
     if json:
 
         print
 
         total = run_test(json.loads, count, json.dumps(data))
-        print format_results('json_stdlib', json.__version__,
-                             'Decoded', total, count)
+        print(format_results('json_stdlib', json.__version__,
+                             'Decoded', total, count))
 
         total = run_test(json.dumps, count, data)
-        print format_results('json_stdlib', json.__version__,
-                             'Encoded', total, count)
+        print(format_results('json_stdlib', json.__version__,
+                             'Encoded', total, count))
 
     if simplejson:
 
@@ -97,59 +97,59 @@ def make_benchmark(name, count):
 
         simplejson._toggle_speedups(True)
         total = run_test(simplejson.loads, count, simplejson.dumps(data))
-        print format_results('simplejson_c', simplejson.__version__,
-                             'Decoded', total, count)
+        print(format_results('simplejson_c', simplejson.__version__,
+                             'Decoded', total, count))
 
         simplejson._toggle_speedups(True)
         total = run_test(simplejson.dumps, count, data)
-        print format_results('simplejson_c', simplejson.__version__,
-                             'Encoded', total, count)
+        print(format_results('simplejson_c', simplejson.__version__,
+                             'Encoded', total, count))
 
         print
 
         simplejson._toggle_speedups(False)
         total = run_test(simplejson.loads, count, simplejson.dumps(data))
-        print format_results('simplejson_py', simplejson.__version__,
-                             'Decoded', total, count)
+        print(format_results('simplejson_py', simplejson.__version__,
+                             'Decoded', total, count))
 
         simplejson._toggle_speedups(False)
         total = run_test(simplejson.dumps, count, data)
-        print format_results('simplejson_py', simplejson.__version__,
-                             'Encoded', total, count)
+        print(format_results('simplejson_py', simplejson.__version__,
+                             'Encoded', total, count))
 
     if ujson:
 
         print
 
         total = run_test(ujson.decode, count, ujson.encode(data))
-        print format_results('ujson', ujson.__version__,
-                             'Decoded', total, count)
+        print(format_results('ujson', ujson.__version__,
+                             'Decoded', total, count))
 
         total = run_test(ujson.encode, count, data)
-        print format_results('ujson', ujson.__version__,
-                             'Encoded', total, count)
+        print(format_results('ujson', ujson.__version__,
+                             'Encoded', total, count))
 
     if erlport:
 
         print
 
         total = run_test(erlport.decode, count, erlport.encode(data))
-        print format_results('erlport', erlport.__version__,
-                             'Decoded', total, count)
+        print(format_results('erlport', erlport.__version__,
+                             'Decoded', total, count))
 
         total = run_test(erlport.encode, count, data)
-        print format_results('erlport', erlport.__version__,
-                             'Encoded', total, count)
+        print(format_results('erlport', erlport.__version__,
+                             'Encoded', total, count))
 
     print
 
     total = run_test(pickle.loads, count, pickle.dumps(data))
-    print format_results('pickle', pickle.__version__,
-                         'Decoded', total, count)
+    print(format_results('pickle', pickle.__version__,
+                         'Decoded', total, count))
 
     total = run_test(pickle.dumps, count, data)
-    print format_results('pickle', pickle.__version__,
-                         'Encoded', total, count)
+    print(format_results('pickle', pickle.__version__,
+                         'Encoded', total, count))
 
 
 def test_1(count):
