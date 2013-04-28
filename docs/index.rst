@@ -10,7 +10,7 @@ Public API
 ==========
 
 .. automodule:: simpleubjson
-  :members:
+   :members:
 
 Draft 8 implementation
 ======================
@@ -19,7 +19,7 @@ Draft 8 implementation
    Draft 9.
 
 .. automodule:: simpleubjson.draft8
-  :members:
+   :members:
 
 Draft 9 implementation
 ======================
@@ -28,14 +28,13 @@ Draft 9 implementation
 
    `Draft 9 breaking changes <http://ubjson.org/#latest>`_
 
+.. automodule:: simpleubjson.draft9
+   :members:
+
 Changes
 =======
 
 .. include:: ../CHANGES.rst
-
-
-.. automodule:: simpleubjson.draft9
-  :members:
 
 .. toctree::
   :maxdepth: 2
