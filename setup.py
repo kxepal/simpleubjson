@@ -39,10 +39,18 @@ except ImportError:
 mod = imp.load_module('version',
                       *imp.find_module('version', ['./simpleubjson/']))
 
+long_description = open('README.rst', 'rb').read().strip()
+long_description += '''
+Changes
+=======
+'''
+long_description += open('CHANGES.rst', 'rb').read().strip()
+
 setup(
     name = 'simpleubjson',
     version = mod.__version__,
     description = 'Simple universal binary json decoder/encoder for Python.',
+    long_description = long_description,
 
     author = 'Alexander Shorin',
     author_email = 'kxepal@gmail.com',
