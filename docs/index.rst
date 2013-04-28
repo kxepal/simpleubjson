@@ -6,6 +6,8 @@
 Welcome to simpleubjson's documentation!
 ****************************************
 
+.. include:: ../README.rst
+
 Public API
 ==========
 
