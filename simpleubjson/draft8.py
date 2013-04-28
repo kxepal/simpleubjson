@@ -386,7 +386,9 @@ class Draft8Encoder(object):
         produced.
 
     (4)
-        If string is `unicode` it will be encoded with `utf-8` charset.
+        Unicode string are been encoded with utf-8 charset. Byte strings are
+        required to have `utf-8` encoding or :exc:`simpleubjson.EncodeError`
+        will be raised.
 
     (5)
         Dict keys should have string type or :exc:`simpleubjson.EncodeError`
@@ -448,15 +450,24 @@ class Draft8Encoder(object):
             return self.encode_decimal(Decimal(obj))
     dispatch[float] = encode_float
 
-    def encode_str(self, obj):
-        if isinstance(obj, unicode):
-            obj = obj.encode('utf-8')
+    def _encode_str(self, obj):
         length = len(obj)
         if length < 255:
             return STRING_S + CHARS[length] + obj
         else:
             return STRING_L + INT32 + pack('>i', length) + obj
-    dispatch[bytes] = encode_str
+
+    def encode_bytes(self, obj):
+        try:
+            obj.decode('utf-8')
+        except UnicodeDecodeError:
+            raise EncodeError('Invalid UTF-8 byte string: %r' % obj)
+        else:
+            return self._encode_str(obj)
+    dispatch[bytes] = encode_bytes
+
+    def encode_str(self, obj):
+        return self._encode_str(obj.encode('utf-8'))
     dispatch[unicode] = encode_str
 
     def encode_decimal(self, obj):
@@ -488,9 +499,12 @@ class Draft8Encoder(object):
         else:
             yield OBJECT_L + pack('>I', length)
         for key, value in obj.items():
-            if not isinstance(key, basestring):
+            if isinstance(key, unicode):
+                yield self.encode_str(key)
+            elif isinstance(key, bytes):
+                yield self.encode_bytes(key)
+            else:
                 raise EncodeError('invalid object key %r' % key)
-            yield self.encode_str(key)
             yield self.encode_next(value)
     dispatch[dict] = encode_dict
 
@@ -507,9 +521,12 @@ class Draft8Encoder(object):
     def encode_dictitems(self, obj):
         yield OBJECT_S + FF
         for key, value in obj:
-            if not isinstance(key, basestring):
+            if isinstance(key, unicode):
+                yield self.encode_str(key)
+            elif isinstance(key, bytes):
+                yield self.encode_bytes(key)
+            else:
                 raise EncodeError('invalid object key %r' % key)
-            yield self.encode_str(key)
             yield self.encode_next(value)
         yield EOS
     dispatch[dict_itemsiterator] = encode_dictitems

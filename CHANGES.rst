@@ -2,6 +2,7 @@
 -----------
 
 - Fix compatibility with Python 3.x;
+- Force binary strings have utf-8 charset on encoding;
 - Improve UBJSON decoding performance;
 
 0.6.0 (2013-04-10)

@@ -323,7 +323,9 @@ class Draft9Encoder(object):
         * everything bigger/smaller: ``huge``
 
     (3)
-        If string is `unicode` it will be encoded with `utf-8` charset.
+        Unicode string are been encoded with utf-8 charset. Byte strings are
+        required to have `utf-8` encoding or :exc:`simpleubjson.EncodeError`
+        will be raised.
 
     (4)
         Dict keys should have string type or :exc:`simpleubjson.EncodeError`
@@ -385,11 +387,20 @@ class Draft9Encoder(object):
             return self.encode_decimal(Decimal(obj))
     dispatch[float] = encode_float
 
-    def encode_str(self, obj):
-        if isinstance(obj, unicode):
-            obj = obj.encode('utf-8')
+    def _encode_str(self, obj):
         return STRING + self.encode_int(len(obj)) + obj
-    dispatch[bytes] = encode_str
+
+    def encode_bytes(self, obj):
+        try:
+            obj.decode('utf-8')
+        except UnicodeDecodeError:
+            raise EncodeError('Invalid UTF-8 byte string: %r' % obj)
+        else:
+            return self._encode_str(obj)
+    dispatch[bytes] = encode_bytes
+
+    def encode_str(self, obj):
+        return self._encode_str(obj.encode('utf-8'))
     dispatch[unicode] = encode_str
 
     def encode_decimal(self, obj):
@@ -418,9 +429,12 @@ class Draft9Encoder(object):
         else:
             items = obj
         for key, value in items:
-            if not isinstance(key, basestring):
+            if isinstance(key, unicode):
+                yield self.encode_str(key)
+            elif isinstance(key, bytes):
+                yield self.encode_bytes(key)
+            else:
                 raise EncodeError('invalid object key %r' % key)
-            yield self.encode_str(key)
             yield self.encode_next(value)
         yield OBJECT_CLOSE
     dispatch[dict] = encode_dict
