@@ -45,32 +45,33 @@ def pprint(data, output=sys.stdout, allow_noop=True,
         while 1:
             try:
                 tag, length, value = decoder.next_tlv()
+                utag = tag.decode()
             except EarlyEndOfStreamError:
                 break
             # standalone markers
             if length is None and value is None:
-                if tag == 'E':
-                    maybe_write('[%s]\n' % (tag,), level - 1)
+                if utag == 'E':
+                    maybe_write('[%s]\n' % (utag,), level - 1)
                     return
                 else:
-                    maybe_write('[%s]\n' % (tag,), level)
+                    maybe_write('[%s]\n' % (utag,), level)
 
             # sized containers
             elif length is not None and value is None:
-                maybe_write('[%s] [%s]\n' % (tag, length), level)
-                if tag in 'oO':
+                maybe_write('[%s] [%s]\n' % (utag, length), level)
+                if utag in 'oO':
                     length = length == 255 and length or length * 2
                 inspect_draft8(decoder, level + 1, length)
 
             # plane values
             elif length is None and value is not None:
                 value = decoder.dispatch[tag](decoder, tag, length, value)
-                maybe_write('[%s] [%s]\n' % (tag, value), level)
+                maybe_write('[%s] [%s]\n' % (utag, value), level)
 
             # sized values
             else:
                 value = decoder.dispatch[tag](decoder, tag, length, value)
-                maybe_write('[%s] [%s] [%s]\n' % (tag, length, value), level)
+                maybe_write('[%s] [%s] [%s]\n' % (utag, length, value), level)
 
             if container_size != 255:
                 container_size -= 1
@@ -81,20 +82,21 @@ def pprint(data, output=sys.stdout, allow_noop=True,
         while 1:
             try:
                 tag, length, value = decoder.next_tlv()
+                utag = tag.decode()
             except EarlyEndOfStreamError:
                 break
             # standalone markers
             if length is None and value is None:
-                if tag in ']}':
+                if utag in ']}':
                     level -= 1
-                maybe_write('[%s]\n' % (tag,), level)
-                if tag in '{[':
+                maybe_write('[%s]\n' % (utag,), level)
+                if utag in '{[':
                     level += 1
 
             # plane values
             elif length is None and value is not None:
                 value = decoder.dispatch[tag](decoder, tag, length, value)
-                maybe_write('[%s] [%s]\n' % (tag, value), level)
+                maybe_write('[%s] [%s]\n' % (utag, value), level)
 
             # sized values
             else:
@@ -103,7 +105,7 @@ def pprint(data, output=sys.stdout, allow_noop=True,
                 # very dirty hack to show size as marker and value
                 _decoder = Draft9Decoder(simpleubjson.encode(length, spec=spec))
                 tlv = _decoder.next_tlv()
-                args = tuple([tag, tlv[0], tlv[2], value])
+                args = tuple([utag, tlv[0].decode(), tlv[2], value])
                 maybe_write(pattern % args, level)
 
     if spec.lower() in ['draft8', 'draft-8']:
