@@ -255,6 +255,7 @@ class Draft9Decoder(object):
             object_close = OBJECT_CLOSE
             string = STRING
             container_openers = set([ARRAY_OPEN, OBJECT_OPEN])
+            object_keys = OBJECT_KEYS
             while 1:
                 tag, length, value = next_tlv()
                 if tag == noop and key is None:
@@ -266,7 +267,7 @@ class Draft9Decoder(object):
                         raise EarlyEndOfStreamError(
                             'value missed for key %r' % key)
                     break
-                elif tag != string and key is None:
+                elif key is None and tag not in OBJECT_KEYS:
                     raise MarkerError('key should be string, got %r' % (tag))
                 else:
                     value = dispatch[tag](self, tag, length, value)
