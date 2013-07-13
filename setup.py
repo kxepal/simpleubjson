@@ -9,6 +9,7 @@
 #
 
 import imp
+import sys
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -39,12 +40,20 @@ except ImportError:
 mod = imp.load_module('version',
                       *imp.find_module('version', ['./simpleubjson/']))
 
-long_description = open('README.rst', 'rb').read().decode('utf-8').strip()
-long_description += '''
+_chunks = [
+    open('README.rst', 'rb').read().strip(),
+    '''
 Changes
 =======
-'''
-long_description += open('CHANGES.rst', 'rb').read().decode('utf-8').strip()
+''',
+    open('CHANGES.rst', 'rb').read().strip()
+]
+
+if sys.version_info[0] == 3:
+    long_description = ''.join(map(lambda c: c.decode(), _chunks))
+else:
+    long_description = ''.join(_chunks)
+
 
 setup(
     name = 'simpleubjson',
