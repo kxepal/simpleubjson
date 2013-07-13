@@ -16,6 +16,7 @@ EOS_A = type('EndOfArrayStream', (_EOS,), {'__slots__': ()})()
 EOS_O = type('EndOfObjectStream', (_EOS,), {'__slots__': ()})()
 del _EOS
 
+import warnings
 from .version import __version__
 from .draft8 import Draft8Decoder, Draft8Encoder
 from .draft9 import Draft9Decoder, Draft9Encoder
@@ -31,8 +32,12 @@ _draft8_encoder = Draft8Encoder
 _draft9_decoder = Draft9Decoder
 _draft9_encoder = Draft9Encoder
 
+warnings.simplefilter('once')
+_DRAFT8_DEPRECATED = ('Draft-8 specification is too old and deprecated.'
+                      ' Please upgrade your data to fit Draft-9 spec.')
 
-def decode(data, allow_noop=False, spec='draft8'):
+
+def decode(data, allow_noop=False, spec='draft9'):
     """Decodes input stream of UBJSON data to Python object.
 
     :param data: `.read([size])`-able object or source string.
@@ -47,6 +52,7 @@ def decode(data, allow_noop=False, spec='draft8'):
     """
 
     if spec.lower() in ['draft8', 'draft-8']:
+        warnings.warn(_DRAFT8_DEPRECATED, DeprecationWarning)
         return _draft8_decoder(data, allow_noop).decode_next()
     elif spec.lower() in ['draft9', 'draft-9']:
         return _draft9_decoder(data, allow_noop).decode_next()
@@ -54,7 +60,7 @@ def decode(data, allow_noop=False, spec='draft8'):
         raise ValueError('Unknown or unsupported specification %s' % spec)
 
 
-def encode(data, output=None, default=None, spec='draft-8'):
+def encode(data, output=None, default=None, spec='draft-9'):
     """Encodes Python object to Universal Binary JSON data.
 
     :param data: Python object.
@@ -73,6 +79,7 @@ def encode(data, output=None, default=None, spec='draft-8'):
              by chunks and None will be returned.
     """
     if spec.lower() in ['draft8', 'draft-8']:
+        warnings.warn(_DRAFT8_DEPRECATED, DeprecationWarning)
         res = _draft8_encoder(default).encode_next(data)
     elif spec.lower() in ['draft9', 'draft-9']:
         res = _draft9_encoder(default).encode_next(data)
@@ -82,3 +89,4 @@ def encode(data, output=None, default=None, spec='draft-8'):
         output.write(res)
     else:
         return res
+
