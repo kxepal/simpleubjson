@@ -39,12 +39,12 @@ except ImportError:
 mod = imp.load_module('version',
                       *imp.find_module('version', ['./simpleubjson/']))
 
-long_description = open('README.rst', 'rb').read().decode().strip()
+long_description = open('README.rst', 'rb').read().decode('utf-8').strip()
 long_description += '''
 Changes
 =======
 '''
-long_description += open('CHANGES.rst', 'rb').read().decode().strip()
+long_description += open('CHANGES.rst', 'rb').read().decode('utf-8').strip()
 
 setup(
     name = 'simpleubjson',
