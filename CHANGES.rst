@@ -1,4 +1,4 @@
-0.7.0 (dev)
+0.7.0 (2014-06-21)
 ------------------
 
 - Add support of UINT8 type for Draft-9 spec;
