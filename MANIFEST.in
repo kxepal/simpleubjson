@@ -1,5 +1,6 @@
-include *.py
-include *.rst
-include docs/*
-include simpleubjson/tests/data/*
-include COPYING
+include LICENSE
+include CHANGES.rst
+include README.rst
+graft simpleubjson
+graft docs
+global-exclude *.pyc
