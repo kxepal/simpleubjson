@@ -17,10 +17,6 @@ Public API
 Draft 9 implementation
 ======================
 
-.. seealso::
-
-   `Draft 9 breaking changes <http://ubjson.org/#latest>`_
-
 .. automodule:: simpleubjson.draft9
    :members:
 
