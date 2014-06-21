@@ -36,3 +36,8 @@ Changes
 
 .. toctree::
   :maxdepth: 2
+
+License
+=======
+
+.. literalinclude:: ../LICENSE
