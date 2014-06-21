@@ -15,15 +15,16 @@ from ..exceptions import EarlyEndOfStreamError
 
 
 def pprint(data, output=sys.stdout, allow_noop=True,
-           indent='    ', max_level=None, spec='draft-8'):
+           indent=' ' * 4, max_level=None, spec='draft-9'):
     """Pretty prints ubjson data using the handy [ ]-notation to represent it in
     readable form. Example::
 
-        [o] [2]
-            [s] [2] [id]
+        [{]
+            [S] [U] [2] [id]
             [I] [1234567890]
-            [s] [4] [name]
-            [s] [3] [bob]
+            [S] [U] [4] [name]
+            [S] [U] [3] [bob]
+        [}]
 
     :param data: `.read([size])`-able object or source string with ubjson data.
     :param output: `.write([data])`-able object.
