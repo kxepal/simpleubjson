@@ -14,15 +14,6 @@ Public API
 .. automodule:: simpleubjson
   :members:
 
-Draft 8 implementation
-======================
-
-.. warning:: UBJSON Draft 8 specification considered as deprecated in favor of
-   Draft 9.
-
-.. automodule:: simpleubjson.draft8
-  :members:
-
 Draft 9 implementation
 ======================
 
@@ -32,6 +23,15 @@ Draft 9 implementation
 
 .. automodule:: simpleubjson.draft9
    :members:
+
+Draft 8 implementation
+======================
+
+.. warning:: UBJSON Draft 8 specification considered as deprecated in favor of
+   Draft 9.
+
+.. automodule:: simpleubjson.draft8
+  :members:
 
 Changes
 =======
