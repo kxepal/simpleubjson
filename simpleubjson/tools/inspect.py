@@ -20,10 +20,10 @@ def pprint(data, output=sys.stdout, allow_noop=True,
     readable form. Example::
 
         [{]
-            [S] [U] [2] [id]
+            [S] [i] [2] [id]
             [I] [1234567890]
-            [S] [U] [4] [name]
-            [S] [U] [3] [bob]
+            [S] [i] [4] [name]
+            [S] [i] [3] [bob]
         [}]
 
     :param data: `.read([size])`-able object or source string with ubjson data.

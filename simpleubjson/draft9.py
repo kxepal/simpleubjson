@@ -414,6 +414,8 @@ class Draft9Encoder(object):
         length = len(obj)
         if length == 1:
             return CHAR + obj
+        elif length <= 127:
+            return STRING + INT8 + CHARS[length] + obj
         elif length <= 255:
             return STRING + UINT8 + CHARS[length] + obj
         return STRING + self.encode_int(length) + obj

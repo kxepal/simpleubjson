@@ -62,7 +62,7 @@ class EncoderTestCase(Draft9TestCase):
             assert value is sentinel
             return [b('sentinel')]
         data = self.encode(sentinel, default=dummy)
-        self.assertEqual(data, b('[SU\x08sentinel]'))
+        self.assertEqual(data, b('[Si\x08sentinel]'))
 
 
 class NoopTestCase(Draft9TestCase):
@@ -309,7 +309,7 @@ class StringTestCase(Draft9TestCase):
 
     def test_encode_ascii(self):
         data = self.encode('foo')
-        self.assertEqual(data, b('SU\x03foo'))
+        self.assertEqual(data, b('Si\x03foo'))
 
     def test_decode_utf8(self):
         source = b('Si\x0c\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
@@ -317,13 +317,18 @@ class StringTestCase(Draft9TestCase):
         self.assertEqual(data, u('привет'))
 
     def test_encode_utf8(self):
-        expected = b('SU\x0c\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
+        expected = b('Si\x0c\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
         data = self.encode('привет')
         self.assertEqual(data, expected)
 
     def test_encode_unicode(self):
-        expected = b('SU\x0c\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
+        expected = b('Si\x0c\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
         data = self.encode(u('привет'))
+        self.assertEqual(data, expected)
+
+    def test_encode_anscii_log(self):
+        expected = b('SU\x80' + 'f' * 128)
+        data = self.encode('f' * 128)
         self.assertEqual(data, expected)
 
 
@@ -355,11 +360,11 @@ class ArrayTestCase(Draft9TestCase):
 
     def test_encode_set(self):
         data = self.encode(set(['foo', 'foo', 'foo']))
-        self.assertEqual(data, b('[SU\x03foo]'))
+        self.assertEqual(data, b('[Si\x03foo]'))
 
     def test_encode_frozenset(self):
         data = self.encode(frozenset(['foo', 'foo', 'foo']))
-        self.assertEqual(data, b('[SU\x03foo]'))
+        self.assertEqual(data, b('[Si\x03foo]'))
 
 
 class StreamTestCase(Draft9TestCase):
@@ -406,17 +411,17 @@ class StreamTestCase(Draft9TestCase):
     def test_encode_dict_iterkeys(self):
         data = {'foo': 'bar'}
         data = self.encode(getattr(data, 'iterkeys', data.keys)())
-        self.assertEqual(data, b('[SU\x03foo]'))
+        self.assertEqual(data, b('[Si\x03foo]'))
 
     def test_encode_dict_itervalues(self):
         data = {'foo': 'bar'}
         data = self.encode(getattr(data, 'itervalues', data.values)())
-        self.assertEqual(data, b('[SU\x03bar]'))
+        self.assertEqual(data, b('[Si\x03bar]'))
 
     def test_encode_dict_iteritems(self):
         data = {'foo': 'bar'}
         data = self.encode(getattr(data, 'iteritems', data.items)())
-        self.assertEqual(data, b('{SU\x03fooSU\x03bar}'))
+        self.assertEqual(data, b('{Si\x03fooSi\x03bar}'))
 
     def test_fail_decode_on_early_array_end(self):
         self.assertRaises(ValueError, list, self.decode(b('[')))
@@ -465,7 +470,7 @@ class ObjectTestCase(Draft9TestCase):
 
     def test_encode_object(self):
         data = self.encode({'foo': 'bar'})
-        self.assertEqual(data, b('{SU\x03fooSU\x03bar}'))
+        self.assertEqual(data, b('{Si\x03fooSi\x03bar}'))
 
     def test_decode_object_with_nested_unsized_objects(self):
         source = b('{Si\x03bar[i\x2a]Si\x03baz{NNNSi\x03fooi\x2a}}')
