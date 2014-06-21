@@ -10,6 +10,7 @@
 
 import imp
 import sys
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -21,7 +22,7 @@ except ImportError:
         return (
             os.path.isdir(path) and
             os.path.isfile(os.path.join(path, '__init__.py'))
-            )
+        )
 
     def find_packages(path='.', base=""):
         """ Find all packages in path """
@@ -41,36 +42,35 @@ mod = imp.load_module('version',
                       *imp.find_module('version', ['./simpleubjson/']))
 
 _chunks = [
-    open('README.rst', 'rb').read().strip(),
+    open('README.rst').read().strip(),
     '''
 Changes
 =======
 ''',
-    open('CHANGES.rst', 'rb').read().strip()
+    open('CHANGES.rst').read().strip()
 ]
 
 if sys.version_info[0] == 3:
-    long_description = ''.join(map(lambda c: c.decode(), _chunks))
+    long_description = ''.join(map(lambda c: c, _chunks))
 else:
     long_description = ''.join(_chunks)
 
-
 setup(
-    name = 'simpleubjson',
-    version = mod.__version__,
-    description = 'Simple universal binary json decoder/encoder for Python.',
-    long_description = long_description,
+    name='simpleubjson',
+    version=mod.__version__,
+    description='Simple universal binary json decoder/encoder for Python.',
+    long_description=long_description,
 
-    author = 'Alexander Shorin',
-    author_email = 'kxepal@gmail.com',
-    license = 'BSD',
-    url = 'http://code.google.com/p/simpleubjson/',
+    author='Alexander Shorin',
+    author_email='kxepal@gmail.com',
+    license='BSD',
+    url='http://code.google.com/p/simpleubjson/',
 
-    install_requires = [],
-    test_suite = 'simpleubjson.tests',
-    zip_safe = True,
+    install_requires=[],
+    test_suite='simpleubjson.tests',
+    zip_safe=True,
 
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
@@ -79,5 +79,5 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
-    packages = find_packages(),
+    packages=find_packages(),
 )
