@@ -9,7 +9,7 @@ It's pretty and simple data format and `simpleubjson`_ aims to be also the same.
   >>> import simpleubjson
   >>> ubjdata = simpleubjson.encode({'hello': 'world', 'тест': [1, 2, 3]})
   >>> ubjdata
-  b'o\x02s\x05hellos\x05worlds\x08\xd1\x82\xd0\xb5\xd1\x81\xd1\x82a\x03B\x01B\x02B\x03'
+  b'{Si\x08\xd1\x82\xd0\xb5\xd1\x81\xd1\x82[i\x01i\x02i\x03]SU\x05helloSi\x05world}'
 
 :func:`simpleubjson.encode` function transforms Python objects into UBJSON
 `binary` string data. To decode it back to Python objects use
@@ -26,25 +26,25 @@ function:
 .. code-block:: python
 
   >>> simpleubjson.pprint(ubjdata)
-  [o] [2]
-    [s] [5] [hello]
-    [s] [5] [world]
-    [s] [8] [тест]
-    [a] [3]
-        [B] [1]
-        [B] [2]
-        [B] [3]
+  [{]
+      [S] [i] [5] [hello]
+      [S] [i] [5] [world]
+      [S] [i] [8] [тест]
+      [[]
+          [i] [1]
+          [i] [2]
+          [i] [3]
+      []]
+  [}]
 
 This representation is a bit more human friendly than traditional hexview and
 designed specially for UBJSON format.
 
-Currently `simpleubjson` follows Draft-8 specification by default, but you
-already may use Draft-9 version by passing ``spec="draft-9"`` argument for
+Currently `simpleubjson` follows Draft-9 specification by default, but you
+may change specification version by passing ``spec="draft-N"`` argument for
 :func:`~simpleubjson.decode`, :func:`~simpleubjson.encode` and
-:func:`~simpleubjson.pprint` functions. Please check `breaking changes`_ before
-switching to it.
+:func:`~simpleubjson.pprint` functions.
 
 .. _UBJSON: http://ubjson.org/
 .. _JSON: http://json.org/
 .. _simpleubjson: http://code.google.com/p/simpleubjson/
-.. _breaking changes: http://ubjson.org/#latest
